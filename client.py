@@ -1,7 +1,8 @@
 import socket
 import os
 import time
-# login 0, register 1, get_contacts 2
+
+# 服务器要执行的操作+对应的指令id: login 0, register 1, get_contacts 2, get_conversations 3
 
 
 def start_client(host='127.0.0.1', port=65432, buffer_size=1024):
@@ -19,11 +20,14 @@ def start_client(host='127.0.0.1', port=65432, buffer_size=1024):
             if cmd == len(functions):
                 return
             if cmd == 1:
-                message()
+                message(s, buffer_size, user_id)
+                os.system('pause')
             elif cmd == 2:
-                search_contact(s, user_id, buffer_size)
+                search_contact(s, buffer_size, user_id)
+                os.system('pause')
             elif cmd == 3:
-                group()
+                group(s, buffer_size, user_id)
+                os.system('pause')
 
 
 def menu(func):
@@ -50,9 +54,14 @@ def login(s, buffer_size):
             print('---注册---')
         else:
             print("---------")
-        user_id = input("账号：")
-        password = input("密码：")
-        msg = login_cmd + '\n' + user_id + '\n' + password    # server通过login_cmd判断当前是登录还是注册信息
+        user_id = input('用户名：')
+        password = input("密码：")     # 有待加密
+        msg = login_cmd + '\n' + user_id + '\n' + password
+        if login_cmd == '1':
+            email = input("邮箱：")
+            phoneNumber = input('电话号码(输入-1,表示不填)：')
+            msg += '\n' + email
+            if phoneNumber != '-1': msg += '\n' + phoneNumber
         s.sendall(msg.encode())
         print("正在检查账号和密码")
         data = s.recv(buffer_size).decode()
@@ -63,44 +72,59 @@ def login(s, buffer_size):
             if login_cmd == '0':
                 print('登录成功, 密码正确')
                 time.sleep(3)
-                os.system('cls')
                 return user_id
             elif login_cmd == '1':
                 print('账号注册成功')
+                time.sleep(3)
                 login_cmd = '0'
+                data = 'no'
         elif data == 'no':
-            print('账号或密码错误')
+            if login_cmd == '0': print('账号或密码错误!')
+            else: print('请换一个用户名或者邮箱!')
         elif data == 'unknown':
             print("该账号不存在，请先注册")
             if input("是否注册<yes/no>") == 'yes':
                 login_cmd = '1'
 
 
-def search_contact(s, user_id, buffer_size):
+def search_contact(s, buffer_size, user_id):
     send_msg = '2\n' + user_id
     s.sendall(send_msg.encode())  # 获取用户所有好友信息，并打印输出
     contacts = s.recv(2 * buffer_size).decode()
     contacts = contacts.strip('\n').split("\n")
-    if len(contacts) > 0:
+    if len(contacts) == 0 or contacts == ['']:
+        print('无好友')
+    else:
         print('好友：')
         for i, friend in enumerate(contacts):
             print(f"{i} {friend}   ")
-    else:
-        print('无好友')
+
     return contacts
 
 
-def message():
-    pass
+def message(s, buffer, user_id):
+    """输出用户的所有会话框，按时间排序，最新会话排在前面，会话内容为消息记录中最新的一条记录"""
+    os.system('cls')
+    send_msg = '3\n' + user_id
+    s.sendall(send_msg.encode())
+    data = s.recv(buffer).decode()
+    data = data.strip('\n').split('\n')
+
+    if len(data) == 0 or data == ['']:
+        print("-------------------------------\n|当前无消息\n-------------------------------")
+    else:
+        print('-------------------------------')
+        for item in data:
+            print('|'+ item + '\n-------------------------------')
 
 
-def group():
+def group(s, buffer, user_id):
+    os.system('cls')
     pass
 
 
 if __name__ == "__main__":
-
-    server_ip_addr = ''
+    server_ip_addr = '127.0.0.1'
     server_port = 65432
     buffer = 1024
     start_client(server_ip_addr, server_port, buffer)
