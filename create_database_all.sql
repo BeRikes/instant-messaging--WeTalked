@@ -56,4 +56,44 @@ CREATE INDEX IX_Messages_IsRead ON Messages_(IsRead);
 -- 如果需要频繁地按照发送者和接收者的组合进行查询，可以创建复合索引
 CREATE INDEX IX_Messages_SenderID_ReceiverID ON Messages_(SenderID, ReceiverID);
 
--- 注意：在实际生产环境中，应该根据具体的查询模式来决定索引的设计，并考虑索引维护成本与查询性能之间的平衡。
+-- 创建群组表
+CREATE TABLE Groups (
+    GroupID INT IDENTITY(1,1) PRIMARY KEY, -- 自动递增的主键
+    GroupName NVARCHAR(100) NOT NULL, -- 群组名称
+    OwnerID INT NOT NULL, -- 群组所有者的用户ID
+    CreatedAt DATETIME DEFAULT GETDATE(), -- 创建时间，默认当前时间
+    Description NVARCHAR(MAX), -- 群组描述
+    CONSTRAINT FK_Group_Owner FOREIGN KEY (OwnerID) REFERENCES Users(UserID)
+);
+
+-- 创建群组成员表
+CREATE TABLE GroupMembers (
+    GroupMemberID INT IDENTITY(1,1) PRIMARY KEY, -- 自动递增的主键
+    GroupID INT NOT NULL, -- 群组ID
+    MemberID INT NOT NULL, -- 成员ID
+    JoinedAt DATETIME DEFAULT GETDATE(), -- 加入时间，默认当前时间
+    IsAdmin BIT DEFAULT 0, -- 是否为管理员，默认不是
+    CONSTRAINT FK_GroupMember_Group FOREIGN KEY (GroupID) REFERENCES Groups(GroupID),
+    CONSTRAINT FK_GroupMember_User FOREIGN KEY (MemberID) REFERENCES Users(UserID),
+    CONSTRAINT UQ_GroupMember_UniquePair UNIQUE (GroupID, MemberID) -- 确保一个群组中的成员唯一
+);
+
+-- 创建群组消息表（可选，如果选择扩展现有消息表则不需要）
+CREATE TABLE GroupMessages (
+    GroupMessageID BIGINT IDENTITY(1,1) PRIMARY KEY, -- 自动递增的大整数主键
+    GroupID INT NOT NULL, -- 群组ID
+    SenderID INT NOT NULL, -- 发送者ID
+    Content NVARCHAR(MAX) NOT NULL, -- 消息内容
+    SentAt DATETIME DEFAULT GETDATE(), -- 发送时间，默认当前时间
+    IsRead BIT DEFAULT 0, -- 是否已读，默认未读
+    CONSTRAINT FK_GroupMessage_Group FOREIGN KEY (GroupID) REFERENCES Groups(GroupID),
+    CONSTRAINT FK_GroupMessage_Sender FOREIGN KEY (SenderID) REFERENCES Users(UserID)
+);
+
+-- 添加索引以优化查询性能
+CREATE INDEX IX_Groups_Name ON Groups(GroupName);
+CREATE INDEX IX_GroupMembers_GroupID ON GroupMembers(GroupID);
+CREATE INDEX IX_GroupMembers_MemberID ON GroupMembers(MemberID);
+CREATE INDEX IX_GroupMessages_GroupID ON GroupMessages(GroupID);
+CREATE INDEX IX_GroupMessages_SenderID ON GroupMessages(SenderID);
+CREATE INDEX IX_GroupMessages_SentAt ON GroupMessages(SentAt);
