@@ -8,7 +8,10 @@ def group(s, buffer, user_id):
 def add_friend_or_group(s, buffer_size, user_id):
     os.system('cls')
     while True:
-        choice = int(input('0 加好友, 1 加群聊'))
+        try:
+            choice = int(input('0 加好友, 1 加群聊'))
+        except ValueError:
+            continue
         if choice == 0:
             add_new_friend(s, buffer_size, user_id)
             break

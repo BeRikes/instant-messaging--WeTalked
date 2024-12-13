@@ -1,6 +1,7 @@
 import threading
 import time
 import os
+import sys
 
 
 def contact(s, buffer_size, user_id):
@@ -13,9 +14,11 @@ def contact(s, buffer_size, user_id):
     choice = int(choice)
     while choice > len(contacts) or choice < -1:
         print('无此联系人，请重新输入')
-        choice = int(input("选择联系人或者输入0，返回菜单......"))
+        choice = input("选择联系人或者输入-1，返回菜单......")
+        if choice == '': return
+        choice = int(choice)
     if choice != -1:
-        talk_with_another(s, buffer_size, user_id, contacts[choice])
+        talk_with_another(s, buffer_size, user_id, contacts[choice - 1])
 
 
 def search_contact(s, buffer_size, user_id):
@@ -34,38 +37,44 @@ def search_contact(s, buffer_size, user_id):
 
 
 def talk_with_another(s, buffer_size, user_name, another_name):
-    print(f'talking with {user_name}, $ + ENTER 返回联系人目录')
+    print(f'talking with {another_name}, $ + ENTER 返回联系人目录')
     # 多线程查询当前信息
     stop_event = threading.Event()
-    convers_thread = threading.Thread(target=conversation_content_update, args=(stop_event, s, buffer_size, user_name, another_name))
+    socket_lock, print_lock = threading.Lock(), threading.Lock()
+    convers_thread = threading.Thread(target=conversation_content_update, args=(stop_event, socket_lock, print_lock, s, buffer_size, user_name, another_name))
     convers_thread.start()
     try:
         while True:
             send_msg = input()
+            with print_lock:
+                clear_last_line()
             if send_msg == '$':
                 break
             send_msg = '6\n' + user_name + '\n' + another_name + '\n' + send_msg
             s.sendall(send_msg.encode())
-            data = s.recv(buffer_size).decode()
+            with socket_lock:
+                data = s.recv(buffer_size).decode()
             if data == 'no':
                 print('此消息发送失败!')
     finally:
         # 确保在离开test函数之前发出停止信号
         stop_event.set()
         # 等待线程结束，可以加个超时时间避免阻塞过久
-        convers_thread.join(timeout=4)  # 超时时间为5秒
+        convers_thread.join(timeout=5)  # 超时时间为5秒
 
 
-def conversation_content_update(stop_event, s, buffer_size, user_name, another):
+def conversation_content_update(stop_event, lock1, lock2, s, buffer_size, user_name, another):
     after = '2020-01-01 00:00:00'
     while not stop_event.is_set():
         msg = '9\n' + user_name + '\n' + another + '\n' + after
         s.sendall(msg.encode())
-        data = s.recv(buffer_size).decode()
+        with lock1:    # 防止与主进程之间竞争缓冲区
+            data = s.recv(buffer_size).decode()
         gap_idx = data.find('\n')
         after = data[:gap_idx]
         if len(data[gap_idx + 1:]) != 7 or data[gap_idx + 1:] != 'no news':
-            print(data[gap_idx + 1:])
+            with lock2:
+                print(data[gap_idx + 1:])
         time.sleep(2)
 
 
@@ -106,3 +115,11 @@ def message(s, buffer, user_id):
                     print('操作失败，失败原因:', data2)
         else:
             talk_with_another(s, buffer, user_id, another)
+
+
+def clear_last_line():
+    """Clear the last line in the terminal."""
+    # Move cursor up one line
+    sys.stdout.write('\x1b[1A')
+    # Delete last line
+    sys.stdout.write('\x1b[2K')
