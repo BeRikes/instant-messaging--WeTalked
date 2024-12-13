@@ -13,6 +13,7 @@ def login(s, buffer_size):
             print("-------------")
         user_id = input('用户名：')
         password = input("密码：")     # 有待加密
+        if user_id == '' or password == '': continue
         msg = login_cmd + '\n' + user_id + '\n' + password
         if login_cmd == '1':
             email = input("邮箱：")

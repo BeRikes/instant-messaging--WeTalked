@@ -7,8 +7,11 @@ def contact(s, buffer_size, user_id):
     contacts = search_contact(s, buffer_size, user_id)
     if contacts is None:
         return
-    choice = int(input("选择联系人或者输入0，返回菜单......")) - 1
-    while choice >= len(contacts) or choice < -1:
+    choice = input("选择联系人或者输入-1，返回菜单......")
+    if choice == '':
+        return
+    choice = int(choice)
+    while choice > len(contacts) or choice < -1:
         print('无此联系人，请重新输入')
         choice = int(input("选择联系人或者输入0，返回菜单......"))
     if choice != -1:
@@ -35,7 +38,6 @@ def talk_with_another(s, buffer_size, user_name, another_name):
     # 多线程查询当前信息
     stop_event = threading.Event()
     convers_thread = threading.Thread(target=conversation_content_update, args=(stop_event, s, buffer_size, user_name, another_name))
-    # convers_thread.daemon = True  # 设置为守护线程，当主线程结束时自动退出
     convers_thread.start()
     try:
         while True:
@@ -78,20 +80,24 @@ def message(s, buffer, user_id):
     if len(data) == 1 and data[0] == '$':
         print("-------------------------------\n|当前无消息\n-------------------------------")
     else:
+        id_idx = [item.find('$') + 1 for item in data]
         print('-------------------------------')
         for i, item in enumerate(data):
-            print('|', i + 1, item.replace('$', '  ') + '\n-------------------------------')
+            print('|', i + 1, item[id_idx[i]:].replace('$', '  ') + '\n-------------------------------')
         # 决定是否同意系统通知(如we_talked: xxx请求添加好友), 或者与一个好友开始通讯
-        choice = int(input("选择一个会话，开始通讯，输入-1返回菜单"))
+        choice = input("选择一个会话，开始通讯，输入-1返回菜单")
+        if choice == '':
+            return
+        choice = int(choice)
         while choice < -1 or choice > len(data):
             choice = int(input("请重新输入，输入-1返回菜单"))
         if choice == -1:
             return
-        another, content = data[choice - 1].split('$')
+        msg_id, another, content = data[choice - 1].split('$')
         if another == 'we_talked':
-            another = content[:-6]
             if content.find('添加好友') != -1:
-                send_msg = '10\n' + user_id + '\n' + another
+                another = content[:-6]
+                send_msg = '10\n' + user_id + '\n' + another + '\n' + msg_id
                 s.sendall(send_msg.encode())
                 data2 = s.recv(buffer).decode()
                 if data2 == 'yes':

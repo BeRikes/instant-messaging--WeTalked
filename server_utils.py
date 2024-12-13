@@ -37,8 +37,12 @@ def give_data(cmd, conn, cursor, user_id, data):
             password,  # PasswordHash
             data[3],  # Email
         ]
-        # if len(data) > 4:
-        #     user_data += data[4:]
+        if len(data) > 4:
+            sql_insert = """
+                INSERT INTO Users (Username, PasswordHash, Email, PhoneNumber)
+                VALUES (?, ?, ?, ?)
+            """
+            user_data.append(data[4])   # PhoneNumber
         user_data = tuple(user_data)
         try:
             cursor.execute(sql_insert, user_data)
@@ -96,7 +100,7 @@ def give_data(cmd, conn, cursor, user_id, data):
             for row in rows:
                 other_user = row.ReceiverName if row.SenderName == user_id else row.SenderName
                 content = row.Content
-                result += other_user + '$' + content + '\n'
+                result += str(row.MessageID) + '$' + other_user + '$' + content + '\n'
         else:
             result = '$'
         return result.rstrip('\n')
@@ -202,7 +206,7 @@ def give_data(cmd, conn, cursor, user_id, data):
             after = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             return after + '\n' + 'no news'
     elif cmd == 10:
-        another = data[2]
+        another, messageID = data[2], data[3]
         query_user_id = "SELECT UserID FROM Users WHERE Username = ?;"
         sender_id = cursor.execute(query_user_id, (user_id,)).fetchone()
         receiver_id = cursor.execute(query_user_id, (another,)).fetchone()
@@ -220,7 +224,13 @@ def give_data(cmd, conn, cursor, user_id, data):
             updated_rows += cursor.execute(update_sql, (receiver_id.UserID, sender_id.UserID)).rowcount
             conn.commit()  # 提交事务以保存更改
             if updated_rows > 0:
-                return 'yes'
+                delete_result = delete_one_message(conn, cursor, messageID)
+                if delete_result == 1:
+                    return 'yes'
+                elif delete_result == 0:
+                    raise '未找到该信息'
+                else:
+                    raise '删除消息时，出现错误，请重试'
             else:
                 return '没有找到待处理的好友申请'
         except Exception as e:
@@ -283,3 +293,24 @@ def send_message_to(conn, cursor, sender_username, receiver_username, message_co
         print(f"An error occurred: {e}")
         return False
     return True
+
+
+def delete_one_message(conn, cursor, messageID):
+    # 删除Messages_表中指定发送者和接收者之间的所有消息
+    delete_messages_query = """
+        DELETE FROM Messages_
+        WHERE MessageID = ?;
+        """
+    try:
+        deleted_rows = cursor.execute(delete_messages_query, (messageID,)).rowcount
+        conn.commit()  # 提交事务以保存更改
+        if deleted_rows > 0:
+            print(f'成功删除信息 MessageID = {messageID}')
+            return 1
+        else:
+            print('未找到该信息')
+            return 0
+    except Exception as e:
+        conn.rollback()
+        print(f"An error occurred: {e}")
+        return -1

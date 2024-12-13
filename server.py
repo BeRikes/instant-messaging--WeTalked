@@ -45,7 +45,7 @@ def start_server(host, port, buffer):
 
 
 if __name__ == "__main__":
-    server_ip_addr = '127.0.0.1'
+    server_ip_addr = '10.150.220.87'
     server_port = 65432
     buffer_size = 1024
     start_server(server_ip_addr, server_port, buffer_size)

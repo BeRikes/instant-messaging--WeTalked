@@ -1,4 +1,5 @@
 import socket
+import argparse
 from client_utils.login_register import *
 from client_utils.conversation import *
 from client_utils.friends_groups import *
@@ -53,7 +54,12 @@ def menu(func, user_id):
 
 
 if __name__ == "__main__":
-    server_ip_addr = '127.0.0.1'
-    server_port = 65432
-    buffer = 1024
-    start_client(server_ip_addr, server_port, buffer)
+    parser = argparse.ArgumentParser(description='run python client.py --ip [...] --port [...] --buffer')
+    parser.add_argument('--ip', default='127.0.0.1', type=str, help='the ip addr of remote server')
+    parser.add_argument('--port', default=65432, type=int, help='the port of remote server process')
+    parser.add_argument('--buffer', default=1024, type=int, help='the buffer size for send receive message')
+    args = parser.parse_args()
+    # server_ip_addr = '10.150.220.87'
+    # server_port = 65432
+    # buffer = 1024
+    start_client(args.ip, args.port, args.buffer)

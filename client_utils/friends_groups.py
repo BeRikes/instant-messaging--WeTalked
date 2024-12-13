@@ -15,6 +15,8 @@ def add_friend_or_group(s, buffer_size, user_id):
         elif choice == 1:
             join_in_group(s, buffer_size, user_id)
             break
+        else:
+            print('无此功能，重新输入')
 
 
 def add_new_friend(s, buffer_size, user_id):
@@ -75,10 +77,12 @@ def join_in_group(s, buffer_size, user_id):
                 print('|', i + 1, item[content_idx[i]:])
                 print('------------------------')
             while True:
-                idx = int(input('选择一个群聊: (禁止选不存在)')) - 1
-                if idx > len(data): continue
-                group_id = data[idx][:content_idx[idx] - 1]
-                send_msg = '8\n' + group_id
+                try:
+                    idx = int(input('选择一个群聊: (禁止选不存在)')) - 1
+                    group_id = data[idx][:content_idx[idx] - 1]
+                except Exception:
+                    continue
+                send_msg = '8\n' + group_id + '\n' + user_id
                 s.sendall(send_msg.encode())
                 join_in_result = s.recv(buffer_size).decode()
                 if join_in_result == 'yes':
