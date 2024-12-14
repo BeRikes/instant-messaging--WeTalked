@@ -55,7 +55,7 @@ def menu(func, user_id):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='run python client.py --ip [...] --port [...] --buffer')
-    parser.add_argument('--ip', default='127.0.0.1', type=str, help='the ip addr of remote server')
+    parser.add_argument('--ip', default='10.150.220.87', type=str, help='the ip addr of remote server')
     parser.add_argument('--port', default=65432, type=int, help='the port of remote server process')
     parser.add_argument('--buffer', default=1024, type=int, help='the buffer size for send receive message')
     args = parser.parse_args()

@@ -167,7 +167,7 @@ def give_data(cmd, conn, cursor, user_id, data):
     elif cmd == 8:
         pass
     elif cmd == 9:
-        another, after = data[2], data[3]
+        another, after, pre_time = data[2], data[3], data[4]
         # 查询发送者和接收者的UserID
         query_user_id = "SELECT UserID FROM Users WHERE Username = ?;"
         sender_id = cursor.execute(query_user_id, (user_id,)).fetchone()
@@ -178,33 +178,33 @@ def give_data(cmd, conn, cursor, user_id, data):
             return None
         # 查询消息
         query_messages = """
-                    SELECT SenderID, Content, SentAt
+                    SELECT MessageID, SenderID, Content, SentAt
                     FROM Messages_
                     WHERE ((SenderID = ? AND ReceiverID = ?) OR (SenderID = ? AND ReceiverID = ?))
-                    AND SentAt > ?
-                    ORDER BY SentAt;
+                    AND MessageID > ?
+                    ORDER BY MessageID;
                     """
         cursor.execute(query_messages, (sender_id.UserID, receiver_id.UserID,
                                         receiver_id.UserID, sender_id.UserID,
-                                        after))
+                                        int(after)))
         # 获取所有符合条件的消息
         rows = cursor.fetchall()
         if rows:
             msg = ''
             # 定义一个时间增量（这里是减去5分钟）
             time_delta = timedelta(minutes=5)
-            pre_time = datetime.strptime(after, "%Y-%m-%d %H:%M:%S")
+            pre_time = datetime.strptime(pre_time, '%Y-%m-%d %H:%M:%S')
             for row in rows:
                 if row.SentAt - pre_time >= time_delta:
                     msg += row.SentAt.strftime('%Y-%m-%d %H:%M:%S') + '\n'
                     pre_time = row.SentAt
                 msg += id_to_name[row.SenderID] + ':' + row.Content + '\n'
             msg = msg.rstrip()
-            after = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            return after + '\n' + msg
+            after = str(int(rows[-1].MessageID))
+            pre_time = datetime.strftime(pre_time, '%Y-%m-%d %H:%M:%S')
+            return after + '$' + msg + '$' + pre_time
         else:
-            after = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            return after + '\n' + 'no news'
+            return after + '$' + 'no news' + '$' + pre_time
     elif cmd == 10:
         another, messageID = data[2], data[3]
         query_user_id = "SELECT UserID FROM Users WHERE Username = ?;"

@@ -2,7 +2,7 @@ import threading
 import time
 import os
 import sys
-
+from tk_ui.tk_talk_with_one import Win, Controller
 
 def contact(s, buffer_size, user_id):
     contacts = search_contact(s, buffer_size, user_id)
@@ -18,7 +18,8 @@ def contact(s, buffer_size, user_id):
         if choice == '': return
         choice = int(choice)
     if choice != -1:
-        talk_with_another(s, buffer_size, user_id, contacts[choice - 1])
+        # talk_with_another(s, buffer_size, user_id, contacts[choice - 1])
+        talk_with_another_gui(s, buffer_size, user_id, contacts[choice - 1])
 
 
 def search_contact(s, buffer_size, user_id):
@@ -63,18 +64,33 @@ def talk_with_another(s, buffer_size, user_name, another_name):
         convers_thread.join(timeout=5)  # 超时时间为5秒
 
 
+def talk_with_another_gui(s, buffer_size, user_name, another_name):
+    os.system('cls')
+    print('see GUI')
+    ctl = Controller(s, buffer_size, user_name, another_name)
+    stop_event = threading.Event()
+    win = Win(ctl)
+    convers_thread = threading.Thread(target=ctl.insert_his_msg, args=(stop_event,))
+    convers_thread.start()
+    try:
+        win.mainloop()
+    finally:
+        stop_event.set()
+        convers_thread.join(timeout=5)
+
 def conversation_content_update(stop_event, lock1, lock2, s, buffer_size, user_name, another):
-    after = '2020-01-01 00:00:00'
+    after = '0'
+    pre_time = '2020-01-01 00:00:00'
     while not stop_event.is_set():
-        msg = '9\n' + user_name + '\n' + another + '\n' + after
+        msg = '9\n' + user_name + '\n' + another + '\n' + after + '\n' + pre_time
         s.sendall(msg.encode())
         with lock1:    # 防止与主进程之间竞争缓冲区
-            data = s.recv(buffer_size).decode()
-        gap_idx = data.find('\n')
-        after = data[:gap_idx]
-        if len(data[gap_idx + 1:]) != 7 or data[gap_idx + 1:] != 'no news':
+            data = s.recv(4 * buffer_size)    # 历史消息比较多，缓冲设置大
+        data = data.decode().split('\n')
+        after, content, pre_time = data
+        if len(content) != 7 and content != 'no news':
             with lock2:
-                print(data[gap_idx + 1:])
+                print(content)
         time.sleep(2)
 
 
@@ -114,7 +130,7 @@ def message(s, buffer, user_id):
                 else:
                     print('操作失败，失败原因:', data2)
         else:
-            talk_with_another(s, buffer, user_id, another)
+            talk_with_another_gui(s, buffer, user_id, another)
 
 
 def clear_last_line():
