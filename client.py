@@ -1,5 +1,4 @@
 import socket
-import argparse
 from client_utils.login_register import *
 from client_utils.conversation import *
 from client_utils.friends_groups import *
@@ -11,7 +10,7 @@ from client_utils.friends_groups import *
 
 
 def start_client(host='127.0.0.1', port=65432, buffer_size=1024):
-    """客户端socket程序"""
+    """客户端socket程序(控制台)"""
     functions = ('消息', '联系人', '群聊', '加好友/群', '退出')
     # 创建一个socket对象
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -38,6 +37,18 @@ def start_client(host='127.0.0.1', port=65432, buffer_size=1024):
                 input('输入任意键，返回菜单......')
 
 
+def start_client_with_gui(host, port, buffer_size):
+    """客户端socket程序(GUI界面实现)"""
+    from client_utils_gui.tk_login import Controller, Login
+    # 创建一个socket对象
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((host, port))
+        ctl = Controller(s, buffer_size)
+        login = Login(ctl)
+        login.mainloop()
+    print('程序正常结束，所有资源均已释放，感谢您的使用')
+
+
 def menu(func, user_id):
     """登录成功之后，程序的主菜单，功能界面"""
     os.system('cls')
@@ -54,12 +65,7 @@ def menu(func, user_id):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='run python client.py --ip [...] --port [...] --buffer')
-    parser.add_argument('--ip', default='10.150.220.87', type=str, help='the ip addr of remote server')
-    parser.add_argument('--port', default=65432, type=int, help='the port of remote server process')
-    parser.add_argument('--buffer', default=1024, type=int, help='the buffer size for send receive message')
-    args = parser.parse_args()
-    # server_ip_addr = '10.150.220.87'
-    # server_port = 65432
-    # buffer = 1024
-    start_client(args.ip, args.port, args.buffer)
+    with open('./config.wtd', mode='r', encoding='utf-8') as f:
+        server_ip_addr, server_port, buffer = f.read().strip('\n').split('-')
+        server_port, buffer = int(server_port), int(buffer)
+    start_client_with_gui(server_ip_addr, server_port, buffer)

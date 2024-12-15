@@ -100,14 +100,21 @@ def give_data(cmd, conn, cursor, user_id, data):
             for row in rows:
                 other_user = row.ReceiverName if row.SenderName == user_id else row.SenderName
                 content = row.Content
-                result += str(row.MessageID) + '$' + other_user + '$' + content + '\n'
+                result += str(row.MessageID) + '$' + other_user + '$' + content + '\n'    # 加入messageID是为了删除系统通知
         else:
             result = '$'
         return result.rstrip('\n')
     elif cmd == 4:
         """查找好友"""
         add_name, add_email = data[1], data[2]
-        if add_name != '$':
+        if add_name != '$' and add_email != '$':
+            query = """
+                SELECT Username, Email, PhoneNumber, CreatedAt, LastLogin
+                FROM Users
+                WHERE Username = ? AND Email = ?
+                """
+            cursor.execute(query, (add_name, add_email))
+        elif add_name != '$':
             query = """
                 SELECT Username, Email, PhoneNumber, CreatedAt, LastLogin
                 FROM Users

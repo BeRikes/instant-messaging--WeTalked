@@ -2,7 +2,7 @@ import threading
 import time
 import os
 import sys
-from tk_ui.tk_talk_with_one import Win, Controller
+from client_utils_gui.tk_talk_with_one import Win, Controller
 
 def contact(s, buffer_size, user_id):
     contacts = search_contact(s, buffer_size, user_id)

@@ -1,14 +1,13 @@
 import threading
 import time
-import tkinter.messagebox
 from tkinter import *
 from tkinter import messagebox
 from tkinter.ttk import *
 
 
-class WinGUI(Tk):
-    def __init__(self):
-        super().__init__()
+class WinGUI(Toplevel):
+    def __init__(self, root):
+        super().__init__(root)
         self.__win()
         self.tk_text_history_msg = self.__tk_text_history_msg(self)
         self.tk_text_talk_with = self.__tk_text_talk_with(self)
@@ -102,14 +101,16 @@ class WinGUI(Tk):
 
 
 class Win(WinGUI):
-    def __init__(self, controller):
+    def __init__(self, root, controller):
         self.ctl = controller
-        super().__init__()
+        super().__init__(root)
         self.__event_bind()
         self.ctl.init(self.tk_text_input_msg, self.tk_text_history_msg, self.tk_text_talk_with)
-
+        self.stop_event = threading.Event()
+        self.convers_thread = threading.Thread(target=self.ctl.insert_his_msg, args=(self.stop_event,))
+        self.convers_thread.start()
+        self.bind('<Destroy>', lambda evt: self.stop_event.set())
     def __event_bind(self):
-        self.bind('<Destroy>', self.ctl.tk_exit)
         self.tk_text_input_msg.bind('<Return>', self.ctl.message_to)
         self.tk_send_msg_button.bind('<Button-1>', self.ctl.message_to)
         self.tk_button_image_button.bind('<Button-1>', self.ctl.image_send_to)
@@ -142,7 +143,8 @@ class Controller:
             with self.socket_lock:
                 data = self.s.recv(4 * self.buffer)
             self.after, content, self.pre_time = data.decode().split('$')
-            if len(content) != 7 and content != 'no news':
+            print(content)
+            if content != 'no news':
                 self.his_msg.insert(END, content + '\n')
                 self.his_msg.see(END)  # 自动滚动到底部
             time.sleep(2)
