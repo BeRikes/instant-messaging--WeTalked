@@ -79,7 +79,6 @@ class Win(WinGUI):
     def __init__(self, root, controller):
         self.ctl = controller
         super().__init__(root)
-        print(type(super().cget("bg")))
         self.__event_bind()
         self.ctl.init(420, 194, self.tk_label_label1, self.tk_label_label2, self.tk_input_input1, self.tk_input_input2, self.rollFrame)
 

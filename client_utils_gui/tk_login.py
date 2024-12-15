@@ -108,8 +108,8 @@ class Controller:
         msg = f"{self.login_cmd}\n{user_name}\n{password}"
 
         if self.login_cmd == 1:  # Register
-            email = self.reg.input3.get()
-            phone_number = self.reg.input4.get()
+            email = self.reg.tk_input3.get()
+            phone_number = self.reg.tk_input4.get()
             if email == '':
                 messagebox.showerror('错误', '邮箱不能为空')
                 return
@@ -147,7 +147,7 @@ class Controller:
         if self.login_cmd == 0:
             self.login_cmd = 1
             if self.reg is None or not self.reg.winfo_exists():
-                register = Register(login, ctl)
+                register = Register(self.login, self)
             else:
                 self.reg.deiconify()
         else:

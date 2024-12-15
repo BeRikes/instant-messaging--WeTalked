@@ -111,6 +111,7 @@ class MenuController:
         self.rollFrame.update_idletasks()
 
         content = content.split('\n')
+        print(content)
         if cmd == 3:
             for i, row in enumerate(content):
                 msg_id, another, content = row.split('$')
@@ -140,7 +141,8 @@ class MenuController:
         self.s.sendall(send_msg.encode())
         data = self.s.recv(self.buffer_size).decode()
         if data == '$':
-            self.config_rollFrame(3, '什么都没有~~')
+            messagebox.showinfo('提示', '当前无任何消息')
+            return
         else:
             self.config_rollFrame(3, data)
 
@@ -164,7 +166,11 @@ class MenuController:
         send_msg = '2\n' + self.user_name
         self.s.sendall(send_msg.encode())  # 获取用户所有好友信息，并打印输出
         contacts = self.s.recv(self.buffer_size).decode()
-        self.config_rollFrame(2, contacts)
+        if contacts == '$':
+            messagebox.showinfo('提示', '无联系人，请先去添加好友')
+            return
+        else:
+            self.config_rollFrame(2, contacts)
 
     def contact_talk(self, evt, info):
         new_win = talkWin(self.main_win, talkController(self.s, self.buffer_size, self.user_name, info))
@@ -178,9 +184,6 @@ class MenuController:
     def make_friend_or_group(self, evt):
         new_win = addWin(self.main_win, add_ForG_Controller(self.s, self.buffer_size, self.user_name))
 
-
-    def tk_exit(self, evt):
-        print('exit')
 
 
 # def talk_with_another_new_win(parent, s, buffer_size, user_name, another_name):

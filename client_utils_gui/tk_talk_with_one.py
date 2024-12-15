@@ -149,8 +149,6 @@ class Controller:
                 self.his_msg.see(END)  # 自动滚动到底部
             time.sleep(2)
 
-    def tk_exit(self, evt):
-        print("<Destroy>事件未处理:",evt)
     def message_to(self, evt):
         """Enter快捷键或者点击发送按键发送消息,同时清空输入框"""
         input = self.input_msg.get("1.0", END + "-1c")
