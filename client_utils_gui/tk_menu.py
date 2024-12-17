@@ -80,7 +80,7 @@ class Win(WinGUI):
         self.__event_bind()
         self.ctl.init(self, self.tk_rollFrame, self.tk_label1, self.tk_label2)
     def __event_bind(self):
-        self.bind('<Destroy>', self.safe_destroy)
+        self.bind('<Destroy>', self.ctl.safe_exit)
         self.tk_button1.bind('<Button-1>', self.ctl.message)
         self.tk_button2.bind('<Button-1>', self.ctl.contact)
         self.tk_button3.bind('<Button-1>', self.ctl.group)
@@ -125,9 +125,13 @@ class MenuController:
                 f.grid(row=i, column=0)
         elif cmd == 2:
             for i, row in enumerate(content):
-                label = Label(self.rollFrame, text=row)
+                name, isActive = row.split('$')
+                label = Label(self.rollFrame, text=name)
                 label.grid(row=i, column=0, pady=5)
-                label.bind("<Double-Button-1>", lambda evt, info=row: self.contact_talk(evt, info))
+                label2 = Label(self.rollFrame, text='在线' if isActive == 'True' else '离线')
+                label2.grid(row=i, column=1, pady=5)
+                label.bind("<Double-Button-1>", lambda evt, info=name: self.contact_talk(evt, info))
+                label2.bind("<Double-Button-1>", lambda evt, info=name: self.contact_talk(evt, info))
         else:
             for i, row in enumerate(content):
                 label = Label(self.rollFrame, text=row)
@@ -156,6 +160,7 @@ class MenuController:
                 data2 = self.s.recv(self.buffer_size).decode()
                 if data2 == 'yes':
                     messagebox.showinfo("成功", f"{another}现在是你的好友了")
+                    self.message(None)
                 else:
                     messagebox.showerror("错误", f"操作失败，失败原因:{data2}")
         else:
@@ -184,6 +189,12 @@ class MenuController:
     def make_friend_or_group(self, evt):
         new_win = addWin(self.main_win, add_ForG_Controller(self.s, self.buffer_size, self.user_name))
 
+    def safe_exit(self, evt):
+        send_msg = '11\n' + self.user_name
+        self.s.sendall(send_msg.encode())
+        print(self.s.recv(8), 'to exit')
+        if evt.widget == self.main_win:
+            self.main_win.root.quit()
 
 
 # def talk_with_another_new_win(parent, s, buffer_size, user_name, another_name):

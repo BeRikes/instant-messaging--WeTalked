@@ -3,9 +3,6 @@ from multiprocessing import Process
 import pyodbc as pbc
 
 from server_utils import *
-# 服务器要执行的操作+对应的指令id:
-# login 0, register 1, get_contacts 2, get_conversations 3, search user 4, insert friends 5, talk_to 6
-# search group by group id 7, insert groupMember 8, search_talk_content_between_two 9
 
 
 def handle_client(conn, addr, buffer):

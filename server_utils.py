@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta
 import bcrypt as bpt
 
-
+# 服务器要执行的操作+对应的指令id:
+# login 0, register 1, get_contacts 2, get_conversations 3, search user 4, insert friends 5, message_send_to 6
+# search group by group id 7, insert groupMember 8, search_message_between 9, accept_friend_made_request 10
+# user_exit 11
 system_User_name = 'we_talked'
 
 def give_data(cmd, conn, cursor, user_id, data):
@@ -16,7 +19,16 @@ def give_data(cmd, conn, cursor, user_id, data):
             true_pwd = cursor.fetchone().PasswordHash
             pwd_from_user = data[2]
             if bpt.checkpw(pwd_from_user.encode(), true_pwd):
-                return 'yes'
+                try:
+                    update_cnt = cursor.execute('UPDATE Users SET IsActive = 1 WHERE Username = ?', (user_id,)).rowcount
+                    conn.commit()
+                    if update_cnt > 0:
+                        return 'yes'
+                    else:
+                        return 'no'
+                except Exception as e:
+                    conn.rollback()
+                    print(f"An error occurred: {e}")
             else:
                 return 'no'
         else:
@@ -243,10 +255,21 @@ def give_data(cmd, conn, cursor, user_id, data):
         except Exception as e:
             conn.rollback()
             print(f"An error occurred: {e}")
+    elif cmd == 11:
+        try:
+            update_cnt = cursor.execute('UPDATE Users SET IsActive = 0 WHERE Username = ?', (user_id,)).rowcount
+            conn.commit()
+            if update_cnt > 0:
+                return 'yes'
+            else:
+                return 'no'
+        except Exception as e:
+            conn.rollback()
+            print(f"An error occurred: {e}")
 
 
 def get_contacts(db_cursor, user_name):
-    """获取user_name用户的所有联系人姓名"""
+    """获取user_name用户的所有联系人姓名和是否在线"""
     sql_query = """
     WITH UserIDs AS (
         SELECT UserID FROM Users WHERE Username = ?
@@ -256,7 +279,11 @@ def get_contacts(db_cursor, user_name):
             CASE
                 WHEN F.User1ID = (SELECT UserID FROM UserIDs) THEN U2.Username
                 ELSE U1.Username
-            END AS FriendName
+            END AS FriendName,
+            CASE
+                WHEN F.User1ID = (SELECT UserID FROM UserIDs) THEN U2.IsActive
+                ELSE U1.IsActive
+            END AS IsActive
         FROM
             Friendships F
         JOIN
@@ -268,14 +295,15 @@ def get_contacts(db_cursor, user_name):
             (F.User1ID = (SELECT UserID FROM UserIDs) OR F.User2ID = (SELECT UserID FROM UserIDs))
             AND F.Status_ = 'Accepted'
     )
-    SELECT DISTINCT FriendName FROM FilteredFriendships;
+    SELECT DISTINCT FriendName, IsActive
+    FROM FilteredFriendships;
     """
     db_cursor.execute(sql_query, (user_name,))
     rows = db_cursor.fetchall()
     if rows:
         msg = ''
         for row in rows:
-            msg += row.FriendName + '\n'
+            msg += row.FriendName + '$' + str(row.IsActive) + '\n'
         return msg.rstrip('\n')
     else:
         return None
