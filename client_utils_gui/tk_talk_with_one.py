@@ -141,7 +141,7 @@ class Controller:
             msg = '9\n' + self.user_name + '\n' + self.another + '\n' + self.after + '\n' + self.pre_time
             self.s.sendall(msg.encode())
             with self.socket_lock:
-                data = self.s.recv(4 * self.buffer)
+                data = self.s.recv(4 * self.buffer if self.after == '0' else self.buffer)
             self.after, content, self.pre_time = data.decode().split('$')
             print(content)
             if content != 'no news':

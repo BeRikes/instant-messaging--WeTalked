@@ -4,10 +4,10 @@ import bcrypt as bpt
 # 服务器要执行的操作+对应的指令id:
 # login 0, register 1, get_contacts 2, get_conversations 3, search user 4, insert friends 5, message_send_to 6
 # search group by group id 7, insert groupMember 8, search_message_between 9, accept_friend_made_request 10
-# user_exit 11
+# user_exit 11, request file_instant_trans 12, accept_file_trans 13
 system_User_name = 'we_talked'
 
-def give_data(cmd, conn, cursor, user_id, data):
+def give_data(cmd, conn, cursor, user_id, data, username2addr):
     if cmd == 0:
         """登录"""
         if user_id == system_User_name:
@@ -266,6 +266,23 @@ def give_data(cmd, conn, cursor, user_id, data):
         except Exception as e:
             conn.rollback()
             print(f"An error occurred: {e}")
+    elif cmd == 12:
+        """发送文件即时传输请求(系统消息)"""
+        if send_message_to(conn, cursor, system_User_name, data[2], f'{user_id}请求文件传输{data[3]}'):
+            return 'pending'
+        else:
+            return 'no'
+    elif cmd == 13:
+        """同意文件即时传输"""
+        another, messageID = data[2], data[3]
+        delete_result = delete_one_message(conn, cursor, messageID)
+        if delete_result == 1:
+            another_ip, another_port = username2addr[another]
+            return another_ip + '\n' + str(another_port)
+        elif delete_result == 0:
+            return '0'   # 未找到该信息
+        else:
+            return '1'   # 删除消息时，出现错误，请重试
 
 
 def get_contacts(db_cursor, user_name):

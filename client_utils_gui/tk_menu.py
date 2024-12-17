@@ -1,5 +1,7 @@
+import os.path
+import threading
 from tkinter import *
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from tkinter.ttk import *
 
 from client_utils_gui.tk_talk_with_one import Controller as talkController
@@ -18,6 +20,7 @@ class WinGUI(Toplevel):
         self.tk_label1 = self.__tk_label_m4p09wdw(self)
         self.tk_label2 = self.__tk_label_m4p0a79p(self)
         self.tk_rollFrame = self.__tk_rollFrame(self)
+        self.trans_choice = self.__tk_file_func_choice(self)
     def __win(self):
         self.title("we_talked")
         # 设置窗口大小、居中
@@ -34,7 +37,7 @@ class WinGUI(Toplevel):
         btn.place(x=130, y=86, width=60, height=42)
         return btn
     def __tk_button_m4ocpmgu(self,parent):
-        btn = Button(parent, text="文件", takefocus=False,)
+        btn = Button(parent, text="传输", takefocus=False,)
         btn.place(x=194, y=86, width=60, height=42)
         return btn
     def __tk_button_m4ocvs0p(self,parent):
@@ -51,13 +54,13 @@ class WinGUI(Toplevel):
         return btn
 
     def __tk_label_m4p09wdw(self, parent):
-        label = Label(parent, text="标签", anchor="center", )
-        label.place(x=0, y=30, width=50, height=30)
+        label = Label(parent, text="标签")
+        label.place(x=20, y=30, width=138, height=30)
         return label
 
     def __tk_label_m4p0a79p(self, parent):
-        label = Label(parent, text="标签", anchor="center", )
-        label.place(x=77, y=30, width=134, height=30)
+        label = Label(parent, text="标签")
+        label.place(x=128, y=30, width=80, height=30)
         return label
 
     def __tk_rollFrame(self, parent):
@@ -71,6 +74,11 @@ class WinGUI(Toplevel):
         rollFrame.bind("<Configure>", lambda evt: canvas.configure(scrollregion=canvas.bbox("all"), width=257, height=259))
         return rollFrame
 
+    def __tk_file_func_choice(self, parent):
+        v = StringVar(parent)
+        dropdownmenu = OptionMenu(parent, v, "文件", "文件", "文件夹")
+        dropdownmenu.place(x=187, y=61, width=75, height=25)
+        return v
 
 class Win(WinGUI):
     def __init__(self, root, controller):
@@ -78,13 +86,13 @@ class Win(WinGUI):
         self.ctl = controller
         super().__init__(root)
         self.__event_bind()
-        self.ctl.init(self, self.tk_rollFrame, self.tk_label1, self.tk_label2)
+        self.ctl.init(self, self.tk_rollFrame, self.tk_label1, self.tk_label2, self.trans_choice)
     def __event_bind(self):
         self.bind('<Destroy>', self.ctl.safe_exit)
         self.tk_button1.bind('<Button-1>', self.ctl.message)
-        self.tk_button2.bind('<Button-1>', self.ctl.contact)
+        self.tk_button2.bind('<Button-1>', lambda evt: self.ctl.contact(evt, 2))
         self.tk_button3.bind('<Button-1>', self.ctl.group)
-        self.tk_button4.bind('<Button-1>', self.ctl.file_function)
+        self.tk_button4.bind('<Button-1>', lambda evt: self.ctl.contact(evt, 12))
         self.tk_button5.bind('<Button-1>', self.ctl.make_friend_or_group)
 
     def safe_destroy(self, evt):
@@ -98,9 +106,10 @@ class MenuController:
         self.user_name = user_name
         self.main_win = None
 
-    def init(self, main_win, rollFrame, label1, label2):
+    def init(self, main_win, rollFrame, label1, label2, trans_choice):
         self.main_win = main_win
         self.rollFrame = rollFrame
+        self.trans_choice = trans_choice
         label1.config(text=self.user_name)
         label2.config(text='welcome!')
 
@@ -123,15 +132,19 @@ class MenuController:
                 label2.grid(row=0, column=1, pady=5)
                 label2.bind("<Double-Button-1>", lambda evt, info=row: self.message_talk(evt, info))
                 f.grid(row=i, column=0)
-        elif cmd == 2:
+        elif cmd == 2 or cmd == 12:
             for i, row in enumerate(content):
                 name, isActive = row.split('$')
                 label = Label(self.rollFrame, text=name)
                 label.grid(row=i, column=0, pady=5)
                 label2 = Label(self.rollFrame, text='在线' if isActive == 'True' else '离线')
                 label2.grid(row=i, column=1, pady=5)
-                label.bind("<Double-Button-1>", lambda evt, info=name: self.contact_talk(evt, info))
-                label2.bind("<Double-Button-1>", lambda evt, info=name: self.contact_talk(evt, info))
+                if cmd == 2:
+                    label.bind("<Double-Button-1>", lambda evt, info=name: self.contact_talk(evt, info))
+                    label2.bind("<Double-Button-1>", lambda evt, info=name: self.contact_talk(evt, info))
+                else:
+                    label.bind("<Double-Button-1>", lambda evt, another=name, act=isActive: self.req_file_instant_transmit(evt, another, act))
+                    label2.bind("<Double-Button-1>", lambda evt, another=name, act=isActive: self.req_file_instant_transmit(evt, another, act))
         else:
             for i, row in enumerate(content):
                 label = Label(self.rollFrame, text=row)
@@ -153,7 +166,7 @@ class MenuController:
     def message_talk(self, evt, info):
         msg_id, another, content = info.split('$')
         if another == 'we_talked':      # 系统消息
-            if content.find('添加好友') != -1:
+            if content.find('好友') != -1:
                 another = content[:-6]
                 send_msg = '10\n' + self.user_name + '\n' + another + '\n' + msg_id
                 self.s.sendall(send_msg.encode())
@@ -163,11 +176,29 @@ class MenuController:
                     self.message(None)
                 else:
                     messagebox.showerror("错误", f"操作失败，失败原因:{data2}")
+            elif content.find('文件') != -1:
+                idx = content.find('请求文件传输')
+                another = content[:idx]
+                send_msg = '13\n' + self.user_name + '\n' + another + '\n' + msg_id
+                self.s.sendall(send_msg.encode())
+                data = self.s.recv(self.buffer_size).decode()
+                if data == '0':
+                    messagebox.showerror('错误', '未找到此信息')
+                elif data == '1':
+                    messagebox.showerror('错误', '删除消息时，出现错误，请重试')
+                else:
+                    ip, port = data.split('\n')
+                    filenames = content[idx + 6:].split('$')
+                    save_dir = filedialog.askdirectory(initialdir='/', title='选择文件传输时,存放的目录')
+                    trans_thread = threading.Thread(target=receive_instant_files, args=(ip, int(port), save_dir, filenames),
+                                                    daemon=True)
+                    trans_thread.start()
+                    self.message(None)
         else:
             new_win = talkWin(self.main_win, talkController(self.s, self.buffer_size, self.user_name, another))
 
 
-    def contact(self, evt):
+    def contact(self, evt, cmd):
         send_msg = '2\n' + self.user_name
         self.s.sendall(send_msg.encode())  # 获取用户所有好友信息，并打印输出
         contacts = self.s.recv(self.buffer_size).decode()
@@ -175,7 +206,7 @@ class MenuController:
             messagebox.showinfo('提示', '无联系人，请先去添加好友')
             return
         else:
-            self.config_rollFrame(2, contacts)
+            self.config_rollFrame(cmd, contacts)
 
     def contact_talk(self, evt, info):
         new_win = talkWin(self.main_win, talkController(self.s, self.buffer_size, self.user_name, info))
@@ -183,23 +214,86 @@ class MenuController:
     def group(self, evt):
         messagebox.showwarning('警告', '此功能尚未实现')
 
-    def file_function(self, evt):
-        messagebox.showwarning('警告', '此功能尚未实现')
+    def req_file_instant_transmit(self, evt, another, act):
+        if act == 'False':
+            messagebox.showerror('错误', '对方不在线，无法传输')
+            return
+        choice = self.trans_choice.get()
+        if choice == '文件':
+            files = filedialog.askopenfilenames(initialdir='/', title='选择传输的文件')
+            if len(files) == 0:
+                return
+            else:
+                files_msg = [os.path.basename(file) for file in files]
+                files_msg = '$'.join(files_msg).rstrip('$')
+                send_msg = '12\n' + self.user_name + '\n' + another + '\n' + files_msg
+                self.s.sendall(send_msg.encode())
+                data = self.s.recv(self.buffer_size).decode()
+                if data == 'pending':
+                    messagebox.showinfo('成功', '文件传输请求已发送，等待对方确认')
+                    host, port = self.s.getsockname()
+                    trans_thread = threading.Thread(target=transmit_instant_files, args=(host, port, files), daemon=True)
+                    trans_thread.start()
+                else:
+                    messagebox.showinfo('失败', '服务器拒绝你的文件传输请求')
 
     def make_friend_or_group(self, evt):
         new_win = addWin(self.main_win, add_ForG_Controller(self.s, self.buffer_size, self.user_name))
 
     def safe_exit(self, evt):
-        send_msg = '11\n' + self.user_name
-        self.s.sendall(send_msg.encode())
-        print(self.s.recv(8), 'to exit')
         if evt.widget == self.main_win:
+            send_msg = '11\n' + self.user_name
+            self.s.sendall(send_msg.encode())
+            print(self.s.recv(8), 'to exit')
             self.main_win.root.quit()
 
 
-# def talk_with_another_new_win(parent, s, buffer_size, user_name, another_name):
-#     talk_ctl = talkController(s, buffer_size, user_name, another_name)
-#     talk_win = talkWin(parent, talk_ctl)
+def transmit_instant_files(self_ip, self_port, filenames):
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((self_ip, self_port))
+        s.listen()
+        print(f"listening on {self_ip}:{self_port}")
+        with s:
+            conn, addr = s.accept()
+            print('connected by', addr)
+            messagebox.showinfo('成功', '开始传输')
+            for filename in filenames:
+                send_file(conn, filename)
+            messagebox.showinfo('完成', '所有文件传输完毕')
+
+def receive_instant_files(ip, port, base_dir, filenames):
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((ip, port))
+        messagebox.showinfo('成功', '开始传输')
+        for file in filenames:
+            receive_file(s, os.path.join(base_dir, file))
+        messagebox.showinfo('完成', '所有文件传输完毕')
+
+def receive_file(s, filename):
+    # 打开文件以进行二进制写入
+    with open(filename, 'wb') as file:
+        while True:
+            # 从套接字接收数据
+            data = s.recv(4096)
+            if not data:
+                # 如果没有接收到任何数据，说明文件传输完成
+                break
+            # 写入接收到的数据
+            file.write(data)
+
+def send_file(s, filename):
+    # 打开文件以进行二进制读取
+    with open(filename, 'rb') as file:
+        while True:
+            # 读取文件的块
+            bytes_read = file.read(4096)
+            if not bytes_read:
+                # 如果没有读取到任何数据，说明我们已经到达了文件末尾
+                break
+            # 使用套接字发送我们刚刚读取的数据
+            s.sendall(bytes_read)
 
 
 if __name__ == "__main__":
