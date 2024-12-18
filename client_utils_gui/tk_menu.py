@@ -4,6 +4,7 @@ from tkinter import *
 from tkinter import messagebox, filedialog
 from tkinter.ttk import *
 
+from client_utils_gui.file_utils import transmit_instant_files, receive_instant_files, get_file_list
 from client_utils_gui.tk_talk_with_one import Controller as talkController
 from client_utils_gui.tk_talk_with_one import Win as talkWin
 from client_utils_gui.tk_add_friend_or_group import add_ForG_Controller, Win as addWin
@@ -120,7 +121,6 @@ class MenuController:
         self.rollFrame.update_idletasks()
 
         content = content.split('\n')
-        print(content)
         if cmd == 3:
             for i, row in enumerate(content):
                 msg_id, another, content = row.split('$')
@@ -188,9 +188,9 @@ class MenuController:
                     messagebox.showerror('错误', '删除消息时，出现错误，请重试')
                 else:
                     ip, port = data.split('\n')
-                    filenames = content[idx + 6:].split('$')
+                    filenames = content[idx + 6:].split('@')
                     save_dir = filedialog.askdirectory(initialdir='/', title='选择文件传输时,存放的目录')
-                    trans_thread = threading.Thread(target=receive_instant_files, args=(ip, int(port), save_dir, filenames),
+                    trans_thread = threading.Thread(target=receive_instant_files, args=(ip, int(port), save_dir, filenames, 5),
                                                     daemon=True)
                     trans_thread.start()
                     self.message(None)
@@ -223,19 +223,28 @@ class MenuController:
             files = filedialog.askopenfilenames(initialdir='/', title='选择传输的文件')
             if len(files) == 0:
                 return
-            else:
-                files_msg = [os.path.basename(file) for file in files]
-                files_msg = '$'.join(files_msg).rstrip('$')
-                send_msg = '12\n' + self.user_name + '\n' + another + '\n' + files_msg
-                self.s.sendall(send_msg.encode())
-                data = self.s.recv(self.buffer_size).decode()
-                if data == 'pending':
-                    messagebox.showinfo('成功', '文件传输请求已发送，等待对方确认')
-                    host, port = self.s.getsockname()
-                    trans_thread = threading.Thread(target=transmit_instant_files, args=(host, port, files), daemon=True)
-                    trans_thread.start()
-                else:
-                    messagebox.showinfo('失败', '服务器拒绝你的文件传输请求')
+            files_msg = [os.path.basename(file) for file in files]
+        else:   # choice == '文件夹'
+            filedir = filedialog.askdirectory(initialdir='/', title='选择传输的文件夹')
+            files, real_path = get_file_list(filedir)
+            if len(files) == 0:
+                return
+            base_dir = os.path.basename(filedir)
+            files_msg = [os.path.join(base_dir, file) for file in real_path]
+        files_msg = '@'.join(files_msg).rstrip('@')   # 保留字符(@,$,\n，即用户发送内容之中不能包含这几个字符)
+        send_msg = '12\n' + self.user_name + '\n' + another + '\n' + files_msg
+        self.s.sendall(send_msg.encode())
+        data = self.s.recv(self.buffer_size).decode()
+        if data == 'pending':
+            messagebox.showinfo('成功', '文件传输请求已发送，等待对方确认')
+            host, port = self.s.getsockname()
+            trans_thread = threading.Thread(target=transmit_instant_files, args=(host, port, files, 500), daemon=True)
+            trans_thread.start()
+        else:
+            messagebox.showinfo('失败', '服务器拒绝你的文件传输请求')
+
+
+
 
     def make_friend_or_group(self, evt):
         new_win = addWin(self.main_win, add_ForG_Controller(self.s, self.buffer_size, self.user_name))
@@ -248,52 +257,7 @@ class MenuController:
             self.main_win.root.quit()
 
 
-def transmit_instant_files(self_ip, self_port, filenames):
-    import socket
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((self_ip, self_port))
-        s.listen()
-        print(f"listening on {self_ip}:{self_port}")
-        with s:
-            conn, addr = s.accept()
-            print('connected by', addr)
-            messagebox.showinfo('成功', '开始传输')
-            for filename in filenames:
-                send_file(conn, filename)
-            messagebox.showinfo('完成', '所有文件传输完毕')
 
-def receive_instant_files(ip, port, base_dir, filenames):
-    import socket
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((ip, port))
-        messagebox.showinfo('成功', '开始传输')
-        for file in filenames:
-            receive_file(s, os.path.join(base_dir, file))
-        messagebox.showinfo('完成', '所有文件传输完毕')
-
-def receive_file(s, filename):
-    # 打开文件以进行二进制写入
-    with open(filename, 'wb') as file:
-        while True:
-            # 从套接字接收数据
-            data = s.recv(4096)
-            if not data:
-                # 如果没有接收到任何数据，说明文件传输完成
-                break
-            # 写入接收到的数据
-            file.write(data)
-
-def send_file(s, filename):
-    # 打开文件以进行二进制读取
-    with open(filename, 'rb') as file:
-        while True:
-            # 读取文件的块
-            bytes_read = file.read(4096)
-            if not bytes_read:
-                # 如果没有读取到任何数据，说明我们已经到达了文件末尾
-                break
-            # 使用套接字发送我们刚刚读取的数据
-            s.sendall(bytes_read)
 
 
 if __name__ == "__main__":
