@@ -8,6 +8,7 @@ def transmit_instant_files(self_ip, self_port, filenames, timeout):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         timer = threading.Timer(timeout, lambda s=s: timeout_close(s))
         timer.start()
+        print('listen in port', self_port - 1)
         s.bind((self_ip, self_port - 1))
         s.listen()
         print(f"listening on {self_ip}:{self_port}")
@@ -26,6 +27,7 @@ def receive_instant_files(ip, port, base_dir, filenames, timeout):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         timer = threading.Timer(timeout, lambda s=s: timeout_close(s))
         timer.start()
+        print('connect to', port)
         s.connect((ip, port))
         timer.cancel()
         print('\n'.join(filenames))

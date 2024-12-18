@@ -184,8 +184,10 @@ class MenuController:
                 data = self.s.recv(self.buffer_size).decode()
                 if data == '0':
                     messagebox.showerror('错误', '未找到此信息')
+                    return
                 elif data == '1':
                     messagebox.showerror('错误', '删除消息时，出现错误，请重试')
+                    return
                 else:
                     ip, port = data.split('\n')
                     filenames = content[idx + 6:].split('@')
