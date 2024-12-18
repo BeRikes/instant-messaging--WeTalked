@@ -278,7 +278,7 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
         delete_result = delete_one_message(conn, cursor, messageID)
         if delete_result == 1:
             another_ip, another_port = username2addr[another]
-            return another_ip + '\n' + str(another_port)
+            return another_ip + '\n' + str(another_port - 1)
         elif delete_result == 0:
             return '0'   # 未找到该信息
         else:

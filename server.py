@@ -19,13 +19,13 @@ def handle_client(conn, addr, buffer, username2addr):
         with db_conn.cursor() as db_cursor:
             with conn:
                 while True:
-                    data = conn.recv(buffer)
+                    data = conn.recv(4 * buffer)
                     if not data:
                         print(f"Connection closed by {addr}")
                         break
                     data = data.decode().split('\n')
-                    cmd, u_name = int(data[0]), data[1]
                     print(f"Received: {data}")
+                    cmd, u_name = int(data[0]), data[1]
                     if cmd == 0:
                         user_name = u_name     # 保护用户数据安全
                         username2addr[user_name] = addr

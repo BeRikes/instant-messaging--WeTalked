@@ -8,15 +8,13 @@ def transmit_instant_files(self_ip, self_port, filenames, timeout):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         timer = threading.Timer(timeout, lambda s=s: timeout_close(s))
         timer.start()
-        s.bind((self_ip, self_port))
+        s.bind((self_ip, self_port - 1))
         s.listen()
         print(f"listening on {self_ip}:{self_port}")
         conn, addr = s.accept()
         timer.cancel()
         print('connected by', addr)
-        print('send:')
-        print(filenames)
-        print('\n'.join(filenames))
+        messagebox.showinfo('启动', '启动文件传输')
         for filename in filenames:
             if not send_file(conn, filename):
                 if not send_file(conn, filename):
@@ -31,6 +29,7 @@ def receive_instant_files(ip, port, base_dir, filenames, timeout):
         s.connect((ip, port))
         timer.cancel()
         print('\n'.join(filenames))
+        messagebox.showinfo('启动', '启动文件传输')
         for file in filenames:
             file_path = os.path.join(base_dir, file)
             dir_path = os.path.dirname(file_path)
@@ -54,8 +53,13 @@ def receive_file(s, filename):
                 return False
             if header == b'\x00\x00\x00\x00':
                 break
-            data = s.recv(int.from_bytes(header, 'big', signed=False))
-            file.write(data)
+            data_len = int.from_bytes(header, 'big', signed=False)
+            all = b''
+            while data_len > 0:
+                data = s.recv(data_len)
+                all += data
+                data_len -= len(data)
+            file.write(all)
         s.sendall(b'yes')
     return True
 
