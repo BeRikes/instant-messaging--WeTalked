@@ -209,7 +209,7 @@ class MenuController:
                     ip, port = data.split('\n')
                     filenames = content[idx + 6:].split('@')
                     save_dir = filedialog.askdirectory(initialdir='/', title='选择文件传输时,存放的目录')
-                    trans_thread = threading.Thread(target=receive_instant_files, args=(ip, int(port), save_dir, filenames, 5),
+                    trans_thread = threading.Thread(target=receive_instant_files, args=(self.main_win, ip, int(port), save_dir, filenames, 5),
                                                     daemon=True)
                     trans_thread.start()
                     self.message(None)
@@ -259,7 +259,7 @@ class MenuController:
         if data == 'pending':
             messagebox.showinfo('成功', '文件传输请求已发送，等待对方确认')
             host, port = self.s.getsockname()
-            trans_thread = threading.Thread(target=transmit_instant_files, args=(host, port - 1, files, 120), daemon=True)
+            trans_thread = threading.Thread(target=transmit_instant_files, args=(self.main_win, host, port - 1, files, 120), daemon=True)
             trans_thread.start()
         else:
             messagebox.showinfo('失败', '服务器拒绝你的文件传输请求')
@@ -277,10 +277,3 @@ class MenuController:
             print(self.s.recv(8), 'to exit')
             self.main_win.root.quit()
 
-
-
-
-
-if __name__ == "__main__":
-    win = Win(MenuController('a', 1, 'han', 'h@yycom'))
-    win.mainloop()

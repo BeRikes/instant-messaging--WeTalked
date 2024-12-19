@@ -77,9 +77,7 @@ class Login(LoginGUI):
         self.tk_button_m4mxs7d1.bind('<Button-1>', self.ctl.switch_login_reg)
         # 更快捷方便的登录
         self.tk_input1.bind('<Return>', lambda evt: self.tk_input2.focus_set())
-        self.tk_input2.bind('<Return>', lambda evt: self.tk_button_m4mxm4tj.focus_set())
-        self.tk_button_m4mxm4tj.bind('<Return>', self.ctl.submit)
-
+        self.tk_input2.bind('<Return>', self.ctl.submit)
 
 
 class Controller:
@@ -158,10 +156,3 @@ class Controller:
             self.login_cmd = 0
             self.reg.withdraw()
             self.login.deiconify()
-
-
-if __name__ == "__main__":
-    s, buffer = 'a', 1024
-    ctl = Controller(s, buffer)
-    login = Login(ctl)
-    login.mainloop()

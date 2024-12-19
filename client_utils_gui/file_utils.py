@@ -3,8 +3,9 @@ from pathlib import Path
 import threading
 from tkinter import messagebox
 import socket
+from client_utils_gui.tk_file_trans import fileWin
 
-def transmit_instant_files(self_ip, self_port, filenames, timeout):
+def transmit_instant_files(root, self_ip, self_port, filenames, timeout):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         timer = threading.Timer(timeout, lambda s=s: timeout_close(s))
         timer.start()
@@ -12,21 +13,21 @@ def transmit_instant_files(self_ip, self_port, filenames, timeout):
         s.listen()
         conn, addr = s.accept()
         timer.cancel()
-        messagebox.showinfo('启动', '启动文件传输')
+        file_win = fileWin(root, len(filenames))
         for filename in filenames:
             if not send_file(conn, filename):
                 messagebox.showerror('错误', f'{filename}文件传输失败')
                 return
-        messagebox.showinfo('完成', '所有文件传输完毕')
+            file_win.step(1, filename)
+    messagebox.showinfo('完成', '所有文件传输完毕')
 
-def receive_instant_files(ip, port, base_dir, filenames, timeout):
+def receive_instant_files(root, ip, port, base_dir, filenames, timeout):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         timer = threading.Timer(timeout, lambda s=s: timeout_close(s))
         timer.start()
         s.connect((ip, port))
         timer.cancel()
-        print('\n'.join(filenames))
-        messagebox.showinfo('启动', '启动文件传输')
+        file_win = fileWin(root, len(filenames))
         for file in filenames:
             file_path = os.path.join(base_dir, file)
             dir_path = os.path.dirname(file_path)
@@ -35,7 +36,8 @@ def receive_instant_files(ip, port, base_dir, filenames, timeout):
             if not receive_file(s, file_path):
                 messagebox.showerror('错误', f'{file_path}文件传输失败')
                 return
-        messagebox.showinfo('完成', '所有文件传输完毕')
+            file_win.step(1, file)
+    messagebox.showinfo('完成', '所有文件传输完毕')
 
 def timeout_close(s):
     s.close()

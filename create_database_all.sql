@@ -78,7 +78,6 @@ CREATE TABLE GroupMembers (
     CONSTRAINT UQ_GroupMember_UniquePair UNIQUE (GroupID, MemberID) -- 确保一个群组中的成员唯一
 );
 
--- 创建群组消息表（可选，如果选择扩展现有消息表则不需要）
 CREATE TABLE GroupMessages (
     GroupMessageID BIGINT IDENTITY(1,1) PRIMARY KEY, -- 自动递增的大整数主键
     GroupID INT NOT NULL, -- 群组ID
@@ -88,6 +87,16 @@ CREATE TABLE GroupMessages (
     IsRead BIT DEFAULT 0, -- 是否已读，默认未读
     CONSTRAINT FK_GroupMessage_Group FOREIGN KEY (GroupID) REFERENCES Groups(GroupID),
     CONSTRAINT FK_GroupMessage_Sender FOREIGN KEY (SenderID) REFERENCES Users(UserID)
+);
+
+CREATE TABLE GroupRequests (
+    GroupRequestID INT IDENTITY(1,1) PRIMARY KEY,
+    GroupID INT NOT NULL,
+    UserID INT NOT NULL,
+    Status_ NVARCHAR(20) NOT NULL CHECK (Status_ IN ('Pending', 'Accepted', 'Rejected')), -- 关系状态
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_GroupRequests_Group FOREIGN KEY (GroupID) REFERENCES Groups(GroupID),
+    CONSTRAINT FK_GroupRequests_User FOREIGN KEY (UserID) REFERENCES Users(UserID)
 );
 
 -- 添加索引以优化查询性能
