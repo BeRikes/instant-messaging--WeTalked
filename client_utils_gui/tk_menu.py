@@ -89,7 +89,9 @@ class Win(WinGUI):
         self.ctl = controller
         super().__init__(root)
         self.__event_bind()
-        self.ctl.init(self, self.tk_rollFrame, self.tk_label1, self.tk_label2, self.trans_choice)
+        self.__style_config()
+        self.ctl.init(self, self.tk_rollFrame, self.tk_label1, self.tk_label2, self.trans_choice, self.tk_button1,
+                      self.tk_button2, self.tk_button3, self.tk_button4)
     def __event_bind(self):
         self.bind('<Destroy>', self.ctl.safe_exit)
         self.tk_button1.bind('<Button-1>', self.ctl.message)
@@ -97,6 +99,11 @@ class Win(WinGUI):
         self.tk_button3.bind('<Button-1>', self.ctl.group)
         self.tk_button4.bind('<Button-1>', lambda evt: self.ctl.contact(evt, 12))
         self.tk_button5.bind('<Button-1>', self.ctl.make_friend_or_group)
+
+    def __style_config(self):
+        style = Style()
+        style.configure('TButton', foreground='black', background='white')
+        style.configure('Clicked.TButton', foreground='gray', background='black')
 
     def safe_destroy(self, evt):
         if evt.widget == self:
@@ -108,13 +115,20 @@ class MenuController:
         self.buffer_size = buffer_size
         self.user_name = user_name
         self.main_win = None
+        self.last_state = 0
 
-    def init(self, main_win, rollFrame, label1, label2, trans_choice):
+    def init(self, main_win, rollFrame, label1, label2, trans_choice, button1, button2, button3, button4):
         self.main_win = main_win
         self.rollFrame = rollFrame
         self.trans_choice = trans_choice
+        self.all_button = [button1, button2, button3, button4]
         label1.config(text=self.user_name)
         label2.config(text='welcome!')
+
+    def config_button_color(self, new_state: int):
+        self.all_button[self.last_state].configure(style='TButton')
+        self.all_button[new_state].configure(style='Clicked.TButton')
+        self.last_state = new_state
 
     def config_rollFrame(self, cmd, content):
         for widget in self.rollFrame.winfo_children():     # 清楚之前的内容
@@ -156,6 +170,7 @@ class MenuController:
             # label.bind("<Leave>", lambda evt: label.config(background='SystemButtonFace'))
 
     def message(self, evt):
+        self.config_button_color(0)
         send_msg = '3\n' + self.user_name
         self.s.sendall(send_msg.encode())
         data = self.s.recv(self.buffer_size).decode()
@@ -203,6 +218,7 @@ class MenuController:
 
 
     def contact(self, evt, cmd):
+        self.config_button_color(1 if cmd == 2 else 3)
         send_msg = '2\n' + self.user_name
         self.s.sendall(send_msg.encode())  # 获取用户所有好友信息，并打印输出
         contacts = self.s.recv(self.buffer_size).decode()
@@ -216,6 +232,7 @@ class MenuController:
         new_win = talkWin(self.main_win, talkController(self.s, self.buffer_size, self.user_name, info))
 
     def group(self, evt):
+        self.config_button_color(2)
         messagebox.showwarning('警告', '此功能尚未实现')
 
     def req_file_instant_transmit(self, evt, another, act):
