@@ -240,7 +240,7 @@ class MenuController:
         if data == 'pending':
             messagebox.showinfo('成功', '文件传输请求已发送，等待对方确认')
             host, port = self.s.getsockname()
-            trans_thread = threading.Thread(target=transmit_instant_files, args=(host, port, files, 120), daemon=True)
+            trans_thread = threading.Thread(target=transmit_instant_files, args=(host, port - 1, files, 120), daemon=True)
             trans_thread.start()
         else:
             messagebox.showinfo('失败', '服务器拒绝你的文件传输请求')

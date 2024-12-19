@@ -163,8 +163,6 @@ class Controller:
         if data == 'no':
             messagebox.showwarning("警告", '此条消息发送失败')
 
-        self.input_msg.delete("1.0", END)
-
     def image_send_to(self, evt):
         print("<Button-1>事件未处理:",evt)
     def file_send_to(self, evt):
