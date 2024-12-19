@@ -112,6 +112,7 @@ class Win(WinGUI):
         self.bind('<Destroy>', lambda evt: self.stop_event.set())
     def __event_bind(self):
         self.tk_text_input_msg.bind('<Return>', self.ctl.message_to)
+        # self.tk_text_input_msg.bind("<Shift-Return>", self.ctl.input_an_enter)
         self.tk_send_msg_button.bind('<Button-1>', self.ctl.message_to)
         self.tk_button_image_button.bind('<Button-1>', self.ctl.image_send_to)
         self.tk_button_file_button.bind('<Button-1>', self.ctl.file_send_to)
@@ -165,10 +166,13 @@ class Controller:
         return 'break'     # 去除残留回车键
 
     def image_send_to(self, evt):
-        print("<Button-1>事件未处理:",evt)
+        print("<Button-1>事件未处理:", evt)
     def file_send_to(self, evt):
-        print("<Button-1>事件未处理:",evt)
+        print("<Button-1>事件未处理:", evt)
 
+    # def input_an_enter(self, evt):
+    #     self.input_msg.insert(END, "\n")
+    #     return "break"
 
 if __name__ == "__main__":
     s, buffer = 'a', 1

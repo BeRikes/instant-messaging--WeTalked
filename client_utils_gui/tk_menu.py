@@ -26,7 +26,7 @@ class WinGUI(Toplevel):
         self.title("we_talked")
         # 设置窗口大小、居中
         width = 257
-        height = 426
+        height = 442
         screenwidth = self.winfo_screenwidth()
         screenheight = self.winfo_screenheight()
         geometry = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
@@ -51,7 +51,7 @@ class WinGUI(Toplevel):
         return btn
     def __tk_button_m4ocxrrl(self,parent):
         btn = Button(parent, text="加好友/群", takefocus=False,)
-        btn.place(x=0, y=396, width=63, height=30)
+        btn.place(x=0, y=412, width=63, height=30)
         return btn
 
     def __tk_label_m4p09wdw(self, parent):
@@ -70,7 +70,7 @@ class WinGUI(Toplevel):
         yscrollbar = Scrollbar(parent, orient="vertical", command=canvas.yview)  # 创建滚动条
         yscrollbar.place(x=240, y=128, height=259)
         xscrollbar = Scrollbar(parent, orient="horizontal", command=canvas.xview)
-        xscrollbar.place(x=0, y=399, width=257)
+        xscrollbar.place(x=0, y=399, width=257, height=13)
         canvas.configure(yscrollcommand=yscrollbar.set, xscrollcommand=xscrollbar.set)
         rollFrame = Frame(canvas)  # 在画布上创建frame
         canvas.create_window((0, 0), window=rollFrame, anchor='nw')  # 要用create_window才能跟随画布滚动
