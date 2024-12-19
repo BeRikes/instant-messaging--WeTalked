@@ -8,26 +8,21 @@ def transmit_instant_files(self_ip, self_port, filenames, timeout):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         timer = threading.Timer(timeout, lambda s=s: timeout_close(s))
         timer.start()
-        print('listen in port', self_port)
         s.bind((self_ip, self_port))
         s.listen()
-        print(f"listening on {self_ip}:{self_port}")
         conn, addr = s.accept()
         timer.cancel()
-        print('connected by', addr)
         messagebox.showinfo('启动', '启动文件传输')
         for filename in filenames:
             if not send_file(conn, filename):
-                if not send_file(conn, filename):
-                    messagebox.showerror('错误', f'{filename}文件传输失败')
-                    return
+                messagebox.showerror('错误', f'{filename}文件传输失败')
+                return
         messagebox.showinfo('完成', '所有文件传输完毕')
 
 def receive_instant_files(ip, port, base_dir, filenames, timeout):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         timer = threading.Timer(timeout, lambda s=s: timeout_close(s))
         timer.start()
-        print('connect to', port)
         s.connect((ip, port))
         timer.cancel()
         print('\n'.join(filenames))

@@ -75,6 +75,10 @@ class Login(LoginGUI):
     def __event_bind(self):
         self.tk_button_m4mxm4tj.bind('<Button-1>', self.ctl.submit)
         self.tk_button_m4mxs7d1.bind('<Button-1>', self.ctl.switch_login_reg)
+        # 更快捷方便的登录
+        self.tk_input1.bind('<Return>', lambda evt: self.tk_input2.focus_set())
+        self.tk_input2.bind('<Return>', lambda evt: self.tk_button_m4mxm4tj.focus_set())
+        self.tk_button_m4mxm4tj.bind('<Return>', self.ctl.submit)
 
 
 

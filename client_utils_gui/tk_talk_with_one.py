@@ -155,13 +155,14 @@ class Controller:
         self.input_msg.delete("1.0", END)
         if not input:
             messagebox.showwarning("警告", "发送内容为空")
-            return
+            return 'break'
         send_msg = '6\n' + self.user_name + '\n' + self.another + '\n' + input.replace("\n", "")
         self.s.sendall(send_msg.encode())
         with self.socket_lock:
             data = self.s.recv(self.buffer).decode()
         if data == 'no':
             messagebox.showwarning("警告", '此条消息发送失败')
+        return 'break'     # 去除残留回车键
 
     def image_send_to(self, evt):
         print("<Button-1>事件未处理:",evt)

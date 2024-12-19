@@ -67,9 +67,11 @@ class WinGUI(Toplevel):
     def __tk_rollFrame(self, parent):
         canvas = Canvas(parent)
         canvas.place(x=0, y=128, width=257, height=259)
-        myscrollbar = Scrollbar(parent, orient="vertical", command=canvas.yview)  # 创建滚动条
-        myscrollbar.place(x=240, y=128, height=259)
-        canvas.configure(yscrollcommand=myscrollbar.set)
+        yscrollbar = Scrollbar(parent, orient="vertical", command=canvas.yview)  # 创建滚动条
+        yscrollbar.place(x=240, y=128, height=259)
+        xscrollbar = Scrollbar(parent, orient="horizontal", command=canvas.xview)
+        xscrollbar.place(x=0, y=399, width=257)
+        canvas.configure(yscrollcommand=yscrollbar.set, xscrollcommand=xscrollbar.set)
         rollFrame = Frame(canvas)  # 在画布上创建frame
         canvas.create_window((0, 0), window=rollFrame, anchor='nw')  # 要用create_window才能跟随画布滚动
         rollFrame.bind("<Configure>", lambda evt: canvas.configure(scrollregion=canvas.bbox("all"), width=257, height=259))
