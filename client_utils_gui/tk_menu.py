@@ -1,5 +1,6 @@
 import os.path
 import threading
+import tkinter as tk
 from tkinter import *
 from tkinter import messagebox, filedialog
 from tkinter.ttk import *
@@ -102,8 +103,10 @@ class Win(WinGUI):
 
     def __style_config(self):
         style = Style()
-        style.configure('TButton', foreground='black', background='white')
+        style.configure('TButton', foreground='black', background='SystemButtonFace')
+        # style.map('TButton', background=[('active', '!disabled', 'SystemButtonFace')], foreground=[('active', '!disabled', 'black')])
         style.configure('Clicked.TButton', foreground='gray', background='black')
+
 
     def safe_destroy(self, evt):
         if evt.widget == self:
@@ -122,6 +125,8 @@ class MenuController:
         self.rollFrame = rollFrame
         self.trans_choice = trans_choice
         self.all_button = [button1, button2, button3, button4]
+        # for button in self.all_button:
+        #     button.configure(style='TButton')
         label1.config(text=self.user_name)
         label2.config(text='welcome!')
 
@@ -130,9 +135,14 @@ class MenuController:
         self.all_button[new_state].configure(style='Clicked.TButton')
         self.last_state = new_state
 
+    def config_text_color(self, evt, frame, all_label: tuple, bd):
+        frame.config(bg=bd)
+        for label in all_label:
+            label.config(bg=bd)
+
     def config_rollFrame(self, cmd, content):
         for widget in self.rollFrame.winfo_children():     # 清楚之前的内容
-            if isinstance(widget, (Label, Frame)):
+            if isinstance(widget, (tk.Label, tk.Frame)):
                 widget.destroy()
         self.rollFrame.update_idletasks()
 
@@ -140,21 +150,31 @@ class MenuController:
         if cmd == 3:
             for i, row in enumerate(content):
                 msg_id, another, content = row.split('$')
-                f = Frame(self.rollFrame)
-                label = Label(f, text=another)
-                label.grid(row=0, column=0, pady=5)
-                label.bind("<Double-Button-1>", lambda evt, info=row: self.message_talk(evt, info))
-                label2 = Label(f, text=content)
-                label2.grid(row=0, column=1, pady=5)
-                label2.bind("<Double-Button-1>", lambda evt, info=row: self.message_talk(evt, info))
+                f = tk.Frame(self.rollFrame)
                 f.grid(row=i, column=0)
+                label = tk.Label(f, text=another)
+                label.pack(side='left')
+                label2 = tk.Label(f, text=content)
+                label2.pack(side='left')
+                label.bind("<Double-Button-1>", lambda evt, info=row: self.message_talk(evt, info))
+                label2.bind("<Double-Button-1>", lambda evt, info=row: self.message_talk(evt, info))
+                f.bind('<Enter>', lambda evt, frame=f, all_label=(label, label2), bd='#DCDCDC': self.config_text_color(
+                    evt, frame, all_label, bd))
+                f.bind('<Leave>', lambda evt, frame=f, all_label=(label, label2), bd='SystemButtonFace': self.config_text_color(
+                    evt, frame, all_label, bd))
         elif cmd == 2 or cmd == 12:
             for i, row in enumerate(content):
                 name, isActive = row.split('$')
-                label = Label(self.rollFrame, text=name)
-                label.grid(row=i, column=0, pady=5)
-                label2 = Label(self.rollFrame, text='在线' if isActive == 'True' else '离线')
-                label2.grid(row=i, column=1, pady=5)
+                f = tk.Frame(self.rollFrame)
+                f.grid(row=i, column=0)
+                label = tk.Label(f, text=name)
+                label.pack(side='left')
+                label2 = tk.Label(f, text='在线' if isActive == 'True' else '离线')
+                label2.pack(side='left')
+                f.bind('<Enter>', lambda evt, frame=f, all_label=(label, label2), bd='#DCDCDC': self.config_text_color(
+                    evt, frame, all_label, bd))
+                f.bind('<Leave>', lambda evt, frame=f, all_label=(label, label2), bd='SystemButtonFace': self.config_text_color(
+                    evt, frame, all_label, bd))
                 if cmd == 2:
                     label.bind("<Double-Button-1>", lambda evt, info=name: self.contact_talk(evt, info))
                     label2.bind("<Double-Button-1>", lambda evt, info=name: self.contact_talk(evt, info))
@@ -163,11 +183,8 @@ class MenuController:
                     label2.bind("<Double-Button-1>", lambda evt, another=name, act=isActive: self.req_file_instant_transmit(evt, another, act))
         else:
             for i, row in enumerate(content):
-                label = Label(self.rollFrame, text=row)
+                label = tk.Label(self.rollFrame, text=row)
                 label.grid(row=i, column=0, pady=5)
-            # 貌似这个bind只对最后一个Label有效
-            # label.bind("<Enter>", lambda evt: label.config(background='#DCDCDC'))
-            # label.bind("<Leave>", lambda evt: label.config(background='SystemButtonFace'))
 
     def message(self, evt):
         self.config_button_color(0)
@@ -199,17 +216,19 @@ class MenuController:
                 send_msg = '13\n' + self.user_name + '\n' + another + '\n' + msg_id
                 self.s.sendall(send_msg.encode())
                 data = self.s.recv(self.buffer_size).decode()
+                if data == '-1':
+                    messagebox.showerror('错误', '对方不在线，请等到下次传输')
+                    return
                 if data == '0':
                     messagebox.showerror('错误', '未找到此信息')
                     return
-                elif data == '1':
+                if data == '1':
                     messagebox.showerror('错误', '删除消息时，出现错误，请重试')
                     return
                 else:
-                    ip, port = data.split('\n')
-                    filenames = content[idx + 6:].split('@')
                     save_dir = filedialog.askdirectory(initialdir='/', title='选择文件传输时,存放的目录')
-                    trans_thread = threading.Thread(target=receive_instant_files, args=(self.main_win, ip, int(port), save_dir, filenames, 5),
+                    ip, port = data.split('\n')
+                    trans_thread = threading.Thread(target=receive_instant_files, args=(self.main_win, ip, int(port), save_dir, content[idx + 6:], 5),
                                                     daemon=True)
                     trans_thread.start()
                     self.message(None)
@@ -259,7 +278,7 @@ class MenuController:
         if data == 'pending':
             messagebox.showinfo('成功', '文件传输请求已发送，等待对方确认')
             host, port = self.s.getsockname()
-            trans_thread = threading.Thread(target=transmit_instant_files, args=(self.main_win, host, port, files, 120), daemon=True)
+            trans_thread = threading.Thread(target=transmit_instant_files, args=(self.main_win, host, port, files, 20), daemon=True)
             trans_thread.start()
         else:
             messagebox.showinfo('失败', '服务器拒绝你的文件传输请求')

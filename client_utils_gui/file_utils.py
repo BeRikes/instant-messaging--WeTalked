@@ -8,7 +8,7 @@ from client_utils_gui.tk_file_trans import fileWin
 def transmit_instant_files(root, self_ip, self_port, filenames, timeout):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            timer = threading.Timer(timeout, lambda s=s: timeout_close(s))
+            timer = threading.Timer(timeout, lambda s=s: timeout_close(s, timeout))
             timer.start()
             s.bind((self_ip, self_port))
             s.listen()
@@ -26,8 +26,9 @@ def transmit_instant_files(root, self_ip, self_port, filenames, timeout):
 
 def receive_instant_files(root, ip, port, base_dir, filenames, timeout):
     try:
+        filenames = filenames.split('@')   # this gonna to take a while
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            timer = threading.Timer(timeout, lambda s=s: timeout_close(s))
+            timer = threading.Timer(timeout, lambda s=s: timeout_close(s, timeout))
             timer.start()
             s.connect((ip, port))
             timer.cancel()
@@ -45,9 +46,9 @@ def receive_instant_files(root, ip, port, base_dir, filenames, timeout):
     except Exception as e:
         messagebox.showerror('失败', f'失败原因：{e}')
 
-def timeout_close(s):
+def timeout_close(s, timeout):
+    messagebox.showerror('超时', f'即时传输超时:{timeout}s')
     s.close()
-    messagebox.showerror('超时', '即时传输超时')
 
 def receive_file(s, filename):
     with open(filename, 'wb') as file:

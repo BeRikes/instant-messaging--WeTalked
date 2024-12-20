@@ -171,8 +171,7 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
             conn.rollback()
             print(f"An error occurred: {e}")
             finish_add = False
-        if finish_add:
-            send_message_to(conn, cursor, system_User_name, add_name, f"{user_id}请求添加好友")
+        if finish_add and send_message_to(conn, cursor, system_User_name, add_name, f"{user_id}请求添加好友"):
             return 'pending'
         else:
             return 'no'
@@ -275,6 +274,10 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
     elif cmd == 13:
         """同意文件即时传输"""
         another, messageID = data[2], data[3]
+        cursor.execute('SELECT IsActive FROM Users WHERE Username = ?', (another,))
+        row = cursor.fetchone()
+        if not row.IsActive:
+            return '-1'  # 目标不在线
         delete_result = delete_one_message(conn, cursor, messageID)
         if delete_result == 1:
             another_ip, another_port = username2addr[another]
