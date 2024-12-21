@@ -9,9 +9,9 @@ def transmit_instant_files(root, self_ip, self_port, filenames, timeout):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             timer = threading.Timer(timeout, lambda s=s: timeout_close(s, timeout))
-            timer.start()
             s.bind((self_ip, self_port))
             s.listen()
+            timer.start()
             conn, addr = s.accept()
             timer.cancel()
             file_win = fileWin(root, len(filenames))

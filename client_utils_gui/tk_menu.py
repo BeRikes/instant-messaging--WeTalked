@@ -208,8 +208,10 @@ class MenuController:
                 if data2 == 'yes':
                     messagebox.showinfo("成功", f"{another}现在是你的好友了")
                     self.message(None)
+                    return
                 else:
                     messagebox.showerror("错误", f"操作失败，失败原因:{data2}")
+                    return
             elif content.find('文件') != -1:
                 idx = content.find('请求文件传输')
                 another = content[:idx]
@@ -232,6 +234,7 @@ class MenuController:
                                                     daemon=True)
                     trans_thread.start()
                     self.message(None)
+                    return
         else:
             new_win = talkWin(self.main_win, talkController(self.s, self.buffer_size, self.user_name, another))
 
@@ -253,6 +256,7 @@ class MenuController:
     def group(self, evt):
         self.config_button_color(2)
         messagebox.showwarning('警告', '此功能尚未实现')
+        return
 
     def req_file_instant_transmit(self, evt, another, act):
         if act == 'False':
@@ -268,6 +272,7 @@ class MenuController:
             filedir = filedialog.askdirectory(initialdir='/', title='选择传输的文件夹')
             files, real_path = get_file_list(filedir)
             if len(files) == 0:
+                messagebox.showerror('失败', '用户取消选择或者该文件夹为空')
                 return
             base_dir = os.path.basename(filedir)
             files_msg = [os.path.join(base_dir, file) for file in real_path]
@@ -278,7 +283,7 @@ class MenuController:
         if data == 'pending':
             messagebox.showinfo('成功', '文件传输请求已发送，等待对方确认')
             host, port = self.s.getsockname()
-            trans_thread = threading.Thread(target=transmit_instant_files, args=(self.main_win, host, port, files, 20), daemon=True)
+            trans_thread = threading.Thread(target=transmit_instant_files, args=(self.main_win, host, port, files, 25), daemon=True)
             trans_thread.start()
         else:
             messagebox.showinfo('失败', '服务器拒绝你的文件传输请求')

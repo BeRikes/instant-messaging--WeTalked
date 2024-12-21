@@ -45,10 +45,11 @@ def start_server(host, port, buffer, username2addr):
                 # 每个新连接启动一个新进程
                 Process(target=handle_client, args=(conn, addr, buffer, username2addr)).start()
 
+
 if __name__ == "__main__":
     server_ip_addr = '10.150.220.87'
     server_port = 65432
-    buffer_size = 1024
+    buffer_size = 10240
     with multiprocessing.Manager() as manager:
         username2addr = manager.dict()    # 子进程之间共享的数据
         start_server(server_ip_addr, server_port, buffer_size, username2addr)
