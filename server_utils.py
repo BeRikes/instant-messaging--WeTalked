@@ -448,7 +448,7 @@ def give_data(cmd, conn, cursor, user_name, data, username2addr):
                     id_dist[sender_id] = sender_name
                 msg += sender_name + ':' + row.Content + '\n'
             msg = msg.rstrip()
-            after = str(int(rows[-1].MessageID))
+            after = str(int(rows[-1].GroupMessageID))
             pre_time = datetime.strftime(pre_time, '%Y-%m-%d %H:%M:%S')
             return after + '$' + msg + '$' + pre_time
         else:
