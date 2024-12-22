@@ -30,6 +30,8 @@ def handle_client(conn, addr, buffer, username2addr):
                         user_name = u_name     # 保护用户数据安全
                         username2addr[user_name] = addr
                         print(username2addr)
+                    elif cmd == 1:
+                        user_name = u_name
                     send_msg = give_data(cmd, db_conn, db_cursor, user_name, data, username2addr)
                     conn.sendall(send_msg.encode())
 
@@ -49,7 +51,7 @@ def start_server(host, port, buffer, username2addr):
 if __name__ == "__main__":
     server_ip_addr = '10.150.220.87'
     server_port = 65432
-    buffer_size = 40960
+    buffer_size = 409600
     with multiprocessing.Manager() as manager:
         username2addr = manager.dict()    # 子进程之间共享的数据
         start_server(server_ip_addr, server_port, buffer_size, username2addr)

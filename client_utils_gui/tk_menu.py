@@ -190,7 +190,7 @@ class MenuController:
         self.config_button_color(0)
         send_msg = '3\n' + self.user_name
         self.s.sendall(send_msg.encode())
-        data = self.s.recv(self.buffer_size).decode()
+        data = self.s.recv(100 * self.buffer_size).decode()
         if data == '$':
             messagebox.showinfo('提示', '当前无任何消息')
             return
@@ -243,7 +243,7 @@ class MenuController:
         self.config_button_color(1 if cmd == 2 else 3)
         send_msg = '2\n' + self.user_name
         self.s.sendall(send_msg.encode())  # 获取用户所有好友信息，并打印输出
-        contacts = self.s.recv(self.buffer_size).decode()
+        contacts = self.s.recv(100 * self.buffer_size).decode()
         if contacts == '$':
             messagebox.showinfo('提示', '无联系人，请先去添加好友')
             return
@@ -277,6 +277,9 @@ class MenuController:
             base_dir = os.path.basename(filedir)
             files_msg = [os.path.join(base_dir, file) for file in real_path]
         files_msg = '@'.join(files_msg).rstrip('@')   # 保留字符(@,$,\n，即用户发送内容之中不能包含这几个字符)
+        if len(files_msg) > self.buffer_size * 100:
+            messagebox.showerror('失败', '所选文件过于庞大，请选择小一点的文件/文件夹')
+            return
         send_msg = '12\n' + self.user_name + '\n' + another + '\n' + files_msg
         self.s.sendall(send_msg.encode())
         data = self.s.recv(self.buffer_size).decode()
@@ -287,9 +290,6 @@ class MenuController:
             trans_thread.start()
         else:
             messagebox.showinfo('失败', '服务器拒绝你的文件传输请求')
-
-
-
 
     def make_friend_or_group(self, evt):
         new_win = addWin(self.main_win, add_ForG_Controller(self.s, self.buffer_size, self.user_name))

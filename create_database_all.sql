@@ -71,6 +71,7 @@ CREATE TABLE GroupMembers (
     GroupMemberID INT IDENTITY(1,1) PRIMARY KEY, -- 自动递增的主键
     GroupID INT NOT NULL, -- 群组ID
     MemberID INT NOT NULL, -- 成员ID
+    Status_ NVARCHAR(20) NOT NULL CHECK (Status_ IN ('Pending', 'Accepted', 'Rejected')), -- 关系状态
     JoinedAt DATETIME DEFAULT GETDATE(), -- 加入时间，默认当前时间
     IsAdmin BIT DEFAULT 0, -- 是否为管理员，默认不是
     CONSTRAINT FK_GroupMember_Group FOREIGN KEY (GroupID) REFERENCES Groups(GroupID),
@@ -93,7 +94,7 @@ CREATE TABLE GroupRequests (
     GroupRequestID INT IDENTITY(1,1) PRIMARY KEY,
     GroupID INT NOT NULL,
     UserID INT NOT NULL,
-    Status_ NVARCHAR(20) NOT NULL CHECK (Status_ IN ('Pending', 'Accepted', 'Rejected')), -- 关系状态
+
     CreatedAt DATETIME DEFAULT GETDATE(),
     CONSTRAINT FK_GroupRequests_Group FOREIGN KEY (GroupID) REFERENCES Groups(GroupID),
     CONSTRAINT FK_GroupRequests_User FOREIGN KEY (UserID) REFERENCES Users(UserID)
