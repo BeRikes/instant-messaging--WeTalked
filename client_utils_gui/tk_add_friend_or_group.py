@@ -17,7 +17,7 @@ class WinGUI(Toplevel):
         self.rollFrame = self.__tk_rollFrame(self)
 
     def __win(self):
-        self.title("we_talked")
+        self.title("we_talked： 加群/加好友")
         # 设置窗口大小、居中
         width = 420
         height = 388 # 194
@@ -190,9 +190,18 @@ class add_ForG_Controller:
                 messagebox.showerror('失败', '好友添加失败')
                 return
 
-
-
-
+    def join_group(self, evt, gid, gname):
+        response = messagebox.askyesno("提示", f"是否加入此群聊")
+        if response:
+            send_msg = f'8\n{self.user_name}\n{gid}\n{gname}\n{self.user_name}'
+            self.s.sendall(send_msg.encode())
+            data = self.s.recv(self.buffer_size).decode()
+            if data == 'pending':
+                messagebox.showinfo('成功', '申请已发送，等待管理员同意')
+                return
+            else:
+                messagebox.showerror('失败', '加群申请发送失败')
+                return
 
 
 if __name__ == "__main__":

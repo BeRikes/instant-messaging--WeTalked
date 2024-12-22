@@ -136,6 +136,7 @@ class Controller:
         self.top_info.tag_configure("center", justify='center')
         # 插入文本并应用居中对齐的标签
         self.top_info.insert(END, self.another, "center")
+        self.top_info.configure(state=DISABLED)
 
     def insert_his_msg(self, stop_event):
         while not stop_event.is_set():
