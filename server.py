@@ -30,6 +30,8 @@ def handle_client(conn, addr, buffer, username2addr):
                         user_name = u_name     # 保护用户数据安全
                         username2addr[user_name] = addr
                         print(username2addr)
+                    elif cmd == 1:
+                        user_name = u_name
                     send_msg = give_data(cmd, db_conn, db_cursor, user_name, data, username2addr)
                     conn.sendall(send_msg.encode())
 

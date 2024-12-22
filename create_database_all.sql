@@ -18,7 +18,7 @@ CREATE TABLE Friendships (
     FriendshipID INT IDENTITY(1,1) PRIMARY KEY, -- 自动递增的主键
     User1ID INT NOT NULL, -- 第一个用户ID
     User2ID INT NOT NULL, -- 第二个用户ID
-    Status_ NVARCHAR(20) NOT NULL CHECK (Status_ IN ('Pending', 'Accepted', 'Rejected')), -- 关系状态
+    Status_ NVARCHAR(20) NOT NULL CHECK (Status_ IN ('Pending', 'Accepted', 'Rejected', 'Blocked')), -- 关系状态
     CreatedAt DATETIME DEFAULT GETDATE(), -- 创建时间，默认当前时间
     CONSTRAINT FK_Friendship_User1 FOREIGN KEY (User1ID) REFERENCES Users(UserID),
     CONSTRAINT FK_Friendship_User2 FOREIGN KEY (User2ID) REFERENCES Users(UserID),
@@ -73,11 +73,13 @@ CREATE TABLE GroupMembers (
     MemberID INT NOT NULL, -- 成员ID
     JoinedAt DATETIME DEFAULT GETDATE(), -- 加入时间，默认当前时间
     IsAdmin BIT DEFAULT 0, -- 是否为管理员，默认不是
+    Status_ NVARCHAR(20) NOT NULL CHECK (Status_ IN ('Pending', 'Accepted', 'Rejected')), -- 关系状态
     CONSTRAINT FK_GroupMember_Group FOREIGN KEY (GroupID) REFERENCES Groups(GroupID),
     CONSTRAINT FK_GroupMember_User FOREIGN KEY (MemberID) REFERENCES Users(UserID),
     CONSTRAINT UQ_GroupMember_UniquePair UNIQUE (GroupID, MemberID) -- 确保一个群组中的成员唯一
 );
 
+-- 创建群组消息表（可选，如果选择扩展现有消息表则不需要）
 CREATE TABLE GroupMessages (
     GroupMessageID BIGINT IDENTITY(1,1) PRIMARY KEY, -- 自动递增的大整数主键
     GroupID INT NOT NULL, -- 群组ID
@@ -87,16 +89,6 @@ CREATE TABLE GroupMessages (
     IsRead BIT DEFAULT 0, -- 是否已读，默认未读
     CONSTRAINT FK_GroupMessage_Group FOREIGN KEY (GroupID) REFERENCES Groups(GroupID),
     CONSTRAINT FK_GroupMessage_Sender FOREIGN KEY (SenderID) REFERENCES Users(UserID)
-);
-
-CREATE TABLE GroupRequests (
-    GroupRequestID INT IDENTITY(1,1) PRIMARY KEY,
-    GroupID INT NOT NULL,
-    UserID INT NOT NULL,
-    Status_ NVARCHAR(20) NOT NULL CHECK (Status_ IN ('Pending', 'Accepted', 'Rejected')), -- 关系状态
-    CreatedAt DATETIME DEFAULT GETDATE(),
-    CONSTRAINT FK_GroupRequests_Group FOREIGN KEY (GroupID) REFERENCES Groups(GroupID),
-    CONSTRAINT FK_GroupRequests_User FOREIGN KEY (UserID) REFERENCES Users(UserID)
 );
 
 -- 添加索引以优化查询性能

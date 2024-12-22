@@ -4,23 +4,23 @@ import bcrypt as bpt
 # 服务器要执行的操作+对应的指令id:
 # login 0, register 1, get_contacts 2, get_conversations 3, search user 4, insert friends 5, message_send_to 6
 # search group by group id 7, insert groupMember 8, search_message_between 9, accept_friend_made_request 10
-# user_exit 11, request file_instant_trans 12, accept_file_trans 13
+# user_exit 11, request file_instant_trans 12, accept_file_trans 13, create_group 14, accept_group_join_request 15
 system_User_name = 'we_talked'
 
-def give_data(cmd, conn, cursor, user_id, data, username2addr):
+def give_data(cmd, conn, cursor, user_name, data, username2addr):
     if cmd == 0:
         """登录"""
-        if user_id == system_User_name:
+        if user_name == system_User_name:
             return 'no'
-        cursor.execute('SELECT UserID FROM Users WHERE Username = ?', (user_id,))
+        cursor.execute('SELECT UserID FROM Users WHERE Username = ?', (user_name,))
         row = cursor.fetchone()
         if row:
-            cursor.execute('SELECT PasswordHash FROM Users WHERE Username = ?', (user_id,))
+            cursor.execute('SELECT PasswordHash FROM Users WHERE Username = ?', (user_name,))
             true_pwd = cursor.fetchone().PasswordHash
             pwd_from_user = data[2]
             if bpt.checkpw(pwd_from_user.encode(), true_pwd):
                 try:
-                    update_cnt = cursor.execute('UPDATE Users SET IsActive = 1 WHERE Username = ?', (user_id,)).rowcount
+                    update_cnt = cursor.execute('UPDATE Users SET IsActive = 1 WHERE Username = ?', (user_name,)).rowcount
                     conn.commit()
                     if update_cnt > 0:
                         return 'yes'
@@ -36,7 +36,7 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
 
     elif cmd == 1:
         """注册"""
-        if user_id == system_User_name:
+        if user_name == system_User_name:
             return 'no'
         password = bpt.hashpw(data[2].encode(), bpt.gensalt())    # 密码加密
         sql_insert = """
@@ -45,7 +45,7 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
             """
         # 要插入的数据
         user_data = [
-            user_id,  # 这里user_id参数默认在注册的时候Username
+            user_name,  # 这里user_name参数默认在注册的时候Username
             password,  # PasswordHash
             data[3],  # Email
         ]
@@ -68,7 +68,7 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
             return 'no'
     elif cmd == 2:
         """获取全部联系人名字"""
-        contact_info = get_contacts(cursor, user_id)
+        contact_info = get_contacts(cursor, user_name)
         if contact_info:
             return contact_info
         else:
@@ -105,12 +105,12 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
             WHERE rn = 1
             ORDER BY SentAt DESC;
             '''
-        cursor.execute(query, (user_id,))
+        cursor.execute(query, (user_name,))
         rows = cursor.fetchall()
         if rows:
             result = ''
             for row in rows:
-                other_user = row.ReceiverName if row.SenderName == user_id else row.SenderName
+                other_user = row.ReceiverName if row.SenderName == user_name else row.SenderName
                 content = row.Content
                 result += str(row.MessageID) + '$' + other_user + '$' + content + '\n'    # 加入messageID是为了删除系统通知
         else:
@@ -156,7 +156,7 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
         add_name = data[2]
         finish_add = True
         query_user_id = "SELECT UserID FROM Users WHERE Username = ?;"
-        sender_id = cursor.execute(query_user_id, (user_id,)).fetchone()
+        sender_id = cursor.execute(query_user_id, (user_name,)).fetchone()
         receiver_id = cursor.execute(query_user_id, (add_name,)).fetchone()
         insert_friend = """
             INSERT INTO Friendships (User1ID, User2ID, Status_)
@@ -171,24 +171,78 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
             conn.rollback()
             print(f"An error occurred: {e}")
             finish_add = False
-        if finish_add and send_message_to(conn, cursor, system_User_name, add_name, f"{user_id}请求添加好友"):
+        if finish_add and send_message_to(conn, cursor, system_User_name, add_name, f"{user_name}请求添加好友"):
             return 'pending'
         else:
             return 'no'
     elif cmd == 6:
-        if send_message_to(conn, cursor, user_id, data[2], data[3]):
+        if send_message_to(conn, cursor, user_name, data[2], data[3]):
             return 'yes'
         else:
             return 'no'
     elif cmd == 7:
-        pass
+        """根据群聊名称来查找群聊, 返回所有查询结果"""
+        group_name = data[1]
+        query = """
+                SELECT GroupID, GroupName, OwnerID, CreatedAt, Description
+                FROM Groups
+                WHERE GroupName = ?
+                ORDER BY OwnerID;
+                """
+        cursor.execute(query, (group_name,))
+        rows = cursor.fetchall()
+        if rows:
+            msg = ''
+            for row in rows:
+                cursor.execute('SELECT Username From Users WHERE UserID = ?', (row.OwnerID,))
+                owner_name = cursor.fetchone().Username
+                msg += row.GroupID + '$' + row.GroupName + '  ' + owner_name + '  ' + row.CreatedAt.strftime(
+                    '%Y-%m-%d %H:%M:%S')
+                if not row.Description:
+                    msg += '  ' + row.Description
+                msg += '\n'
+            return msg.rstrip('\n')
+        else:
+            return '$'
     elif cmd == 8:
-        pass
+        """加入群聊或邀请加入群聊"""
+        group_id, group_name = data[2], data[3]
+        another_name = data[4]
+        query_user_id = "SELECT UserID FROM Users WHERE Username = ?;"
+        user_id = cursor.execute(query_user_id, (user_name,)).fetchone().UserID
+        another_id = cursor.execute(query_user_id, (another_name,)).fetchone().UserID
+        system_user_id = cursor.execute(query_user_id, (system_User_name,)).fetchone().UserID
+        insert_sql = """
+                    INSERT INTO GroupMembers (GroupID, MemberID, Status_)
+                    VALUES (?, ?, 'Pending');
+                    """
+        try:
+            cursor.execute(insert_sql, (group_id, user_id))
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            print(f"An error occurred: {e}")
+            return 'no'
+        owner_id = cursor.execute('SELECT OwnerID FROM Groups WHERE GroupID = ?;', (group_id,)).fetchone().OwnerID
+        if user_id == owner_id:
+            # 由群主用户发出的加群邀请，信息发送对象为非群主
+            receiver_id = another_id
+            if send_message_to(conn, cursor, system_user_id, receiver_id, f'{user_name}邀请您加入群聊{group_name}[{group_id}]'):
+                return 'pending'
+            else:
+                return 'no'
+        else:
+            # 由非群主用户发起的加入群聊申请，信息发送对象为群主
+            receiver_id = owner_id
+            if send_message_to(conn, cursor, system_user_id, receiver_id, f'{user_name}请求加入群聊{group_name}[{group_id}]'):
+                return 'pending'
+            else:
+                return 'no'
     elif cmd == 9:
         another, after, pre_time = data[2], data[3], data[4]
         # 查询发送者和接收者的UserID
         query_user_id = "SELECT UserID FROM Users WHERE Username = ?;"
-        sender_id = cursor.execute(query_user_id, (user_id,)).fetchone()
+        sender_id = cursor.execute(query_user_id, (user_name,)).fetchone()
         receiver_id = cursor.execute(query_user_id, (another,)).fetchone()
         id_to_name = {sender_id.UserID: '我', receiver_id.UserID: "对方"}
         if not sender_id or not receiver_id:
@@ -226,7 +280,7 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
     elif cmd == 10:
         another, messageID = data[2], data[3]
         query_user_id = "SELECT UserID FROM Users WHERE Username = ?;"
-        sender_id = cursor.execute(query_user_id, (user_id,)).fetchone()
+        sender_id = cursor.execute(query_user_id, (user_name,)).fetchone()
         receiver_id = cursor.execute(query_user_id, (another,)).fetchone()
         if not sender_id or not receiver_id:
             print("发送者或接收者不存在")
@@ -256,7 +310,7 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
             print(f"An error occurred: {e}")
     elif cmd == 11:
         try:
-            update_cnt = cursor.execute('UPDATE Users SET IsActive = 0 WHERE Username = ?', (user_id,)).rowcount
+            update_cnt = cursor.execute('UPDATE Users SET IsActive = 0 WHERE Username = ?', (user_name,)).rowcount
             conn.commit()
             if update_cnt > 0:
                 return 'yes'
@@ -267,7 +321,7 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
             print(f"An error occurred: {e}")
     elif cmd == 12:
         """发送文件即时传输请求(系统消息)"""
-        if send_message_to(conn, cursor, system_User_name, data[2], f'{user_id}请求文件传输{data[3]}'):
+        if send_message_to(conn, cursor, system_User_name, data[2], f'{user_name}请求文件传输{data[3]}'):
             return 'pending'
         else:
             return 'no'
@@ -286,6 +340,75 @@ def give_data(cmd, conn, cursor, user_id, data, username2addr):
             return '0'   # 未找到该信息
         else:
             return '1'   # 删除消息时，出现错误，请重试
+    elif cmd == 14:
+        """创建群聊"""
+        group_name = data[2]
+        group_description = data[3]
+        if len(data) > 4:
+            group_members = data[4:0]
+        if group_name == system_User_name:
+            return 'invalid'
+
+        finish_add = True
+        query_user_id = "SELECT UserID FROM Users WHERE Username = ?;"
+        owner_id = cursor.execute(query_user_id, (user_name,)).fetchone().UserID
+        create_group = """
+            INSERT INTO Groups (GroupName, OwnerID, Description)
+            OUTPUT INSERTED.GroupID
+            VALUES (?, ?, ?);
+        """
+        try:
+            group_ids = cursor.execute(create_group, (group_name, owner_id, group_description)).fetchone()
+            group_id = group_ids.GroupID
+            print("New Group Create successfully.")
+            create_owner = """
+                INSERT INTO GroupMembers (GroupID, MemberID, IsAdmin, Status_)
+                VALUES (?, ?, 1, 'Accepted');
+            """
+            cursor.execute(create_owner, (group_id, owner_id))
+            conn.commit()
+            return 'success'
+        except Exception as e:
+            # 如果发生错误，回滚事务
+            conn.rollback()
+            print(f"An error occurred: {e}")
+            return 'no'
+    elif cmd == 15:
+        """进群申请/邀请审核"""
+        group_id = data[3]
+        another_name = data[2]
+        messageID = data[4]
+        query_user_id = "SELECT UserID FROM Users WHERE Username = ?;"
+        sender_id = cursor.execute(query_user_id, (user_name,)).fetchone()
+        receiver_id = cursor.execute(query_user_id, (another_name,)).fetchone()
+        if not sender_id or not receiver_id:
+            return '发送者或接收者不存在'
+
+        query_member = """
+            UPDATE GroupMembers
+            SET Status_ = 'Accepted'
+            WHERE GroupID = ? AND (MemberID = ? OR MemberID = ?) AND IsAdmin = 0 AND Status_ = 'Pending';
+        """
+        try:
+            updated_rows = cursor.execute(query_member, (group_id, sender_id.UserID, receiver_id.UserID)).rowcount
+            conn.commit()  # 提交事务以保存更改
+            if updated_rows > 0:
+                delete_result = delete_one_message(conn, cursor, messageID)
+                if delete_result == 1:
+                    return 'accept'
+                elif delete_result == 0:
+                    return '未发现当前群聊申请'
+                else:
+                    return '删除消息时出现错误，请重试'
+            else:
+                return '没有找到待处理的好友申请'
+        except Exception as e:
+            conn.rollback()
+            print(f"An error occurred: {e}")
+            return 'no'
+    else:
+        print("错误：未知的操作类型")
+        return 'no'
 
 
 def get_contacts(db_cursor, user_name):
@@ -328,20 +451,26 @@ def get_contacts(db_cursor, user_name):
     else:
         return None
 
+
 def send_message_to(conn, cursor, sender_username, receiver_username, message_content):
-    query_user_ids = "SELECT UserID FROM Users WHERE Username = ?;"
-    sender = cursor.execute(query_user_ids, (sender_username,)).fetchone()
-    receiver = cursor.execute(query_user_ids, (receiver_username,)).fetchone()
-    if not sender or not receiver:
-        print("发送者或接收者不存在")
-        return False
+    assert type(sender_username) == type(receiver_username), 'wrong type'
+    if not isinstance(sender_username, int) and not isinstance(receiver_username, int):
+        query_user_ids = "SELECT UserID FROM Users WHERE Username = ?;"
+        sender = cursor.execute(query_user_ids, (sender_username,)).fetchone()
+        receiver = cursor.execute(query_user_ids, (receiver_username,)).fetchone()
+        if not sender or not receiver:
+            print("发送者或接收者不存在")
+            return False
+        sender, receiver = sender.UserID, receiver.UserID
+    else:
+        sender, receiver = sender_username, receiver_username
     # 插入消息到Messages_表
     insert_message_query = """
                     INSERT INTO Messages_ (SenderID, ReceiverID, Content)
                     VALUES (?, ?, ?);
                     """
     try:
-        cursor.execute(insert_message_query, (sender.UserID, receiver.UserID, message_content))
+        cursor.execute(insert_message_query, (sender, receiver, message_content))
         conn.commit()
     except Exception as e:
         conn.rollback()

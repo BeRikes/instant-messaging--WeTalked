@@ -1,4 +1,5 @@
 import os.path
+import re
 import threading
 import tkinter as tk
 from tkinter import *
@@ -9,6 +10,7 @@ from client_utils_gui.file_utils import transmit_instant_files, receive_instant_
 from client_utils_gui.tk_talk_with_one import Controller as talkController
 from client_utils_gui.tk_talk_with_one import Win as talkWin
 from client_utils_gui.tk_add_friend_or_group import add_ForG_Controller, Win as addWin
+from client_utils_gui.tk_create_group import CreateGroupController, GroupCreater as CreateGroupWin
 
 class WinGUI(Toplevel):
     def __init__(self, root):
@@ -19,6 +21,7 @@ class WinGUI(Toplevel):
         self.tk_button2 = self.__tk_button_m4ocvs0p(self)
         self.tk_button1 = self.__tk_button_m4ocvw71(self)
         self.tk_button5 = self.__tk_button_m4ocxrrl(self)
+        self.tk_button6 = self.__tk_button_create_group(self)
         self.tk_label1 = self.__tk_label_m4p09wdw(self)
         self.tk_label2 = self.__tk_label_m4p0a79p(self)
         self.tk_rollFrame = self.__tk_rollFrame(self)
@@ -53,6 +56,11 @@ class WinGUI(Toplevel):
     def __tk_button_m4ocxrrl(self,parent):
         btn = Button(parent, text="加好友/群", takefocus=False,)
         btn.place(x=0, y=412, width=63, height=30)
+        return btn
+
+    def __tk_button_create_group(self,parent):
+        btn = Button(parent, text="创建群聊", takefocus=False,)
+        btn.place(x=68, y=412, width=63, height=30)
         return btn
 
     def __tk_label_m4p09wdw(self, parent):
@@ -100,6 +108,7 @@ class Win(WinGUI):
         self.tk_button3.bind('<Button-1>', self.ctl.group)
         self.tk_button4.bind('<Button-1>', lambda evt: self.ctl.contact(evt, 12))
         self.tk_button5.bind('<Button-1>', self.ctl.make_friend_or_group)
+        self.tk_button6.bind('<Button-1>', self.ctl.create_group)
 
     def __style_config(self):
         style = Style()
@@ -190,7 +199,7 @@ class MenuController:
         self.config_button_color(0)
         send_msg = '3\n' + self.user_name
         self.s.sendall(send_msg.encode())
-        data = self.s.recv(self.buffer_size).decode()
+        data = self.s.recv(self.buffer_size * 100).decode()
         if data == '$':
             messagebox.showinfo('提示', '当前无任何消息')
             return
@@ -201,21 +210,21 @@ class MenuController:
         msg_id, another, content = info.split('$')
         if another == 'we_talked':      # 系统消息
             if content.find('好友') != -1:
-                another = content[:-6]
-                send_msg = '10\n' + self.user_name + '\n' + another + '\n' + msg_id
+                apply_friend = content[:-6]
+                send_msg = '10\n' + self.user_name + '\n' + apply_friend + '\n' + msg_id
                 self.s.sendall(send_msg.encode())
-                data2 = self.s.recv(self.buffer_size).decode()
-                if data2 == 'yes':
-                    messagebox.showinfo("成功", f"{another}现在是你的好友了")
+                data = self.s.recv(self.buffer_size).decode()
+                if data == 'yes':
+                    messagebox.showinfo("成功", f"{apply_friend}现在是你的好友了")
                     self.message(None)
                     return
                 else:
-                    messagebox.showerror("错误", f"操作失败，失败原因:{data2}")
+                    messagebox.showerror("错误", f"操作失败，失败原因:{data}")
                     return
             elif content.find('文件') != -1:
                 idx = content.find('请求文件传输')
-                another = content[:idx]
-                send_msg = '13\n' + self.user_name + '\n' + another + '\n' + msg_id
+                files = content[:idx]
+                send_msg = '13\n' + self.user_name + '\n' + files + '\n' + msg_id
                 self.s.sendall(send_msg.encode())
                 data = self.s.recv(self.buffer_size).decode()
                 if data == '-1':
@@ -235,6 +244,23 @@ class MenuController:
                     trans_thread.start()
                     self.message(None)
                     return
+            elif content.find('群聊'):
+                pattern = r'\[(.*?)\]'
+                last_invite_pos = content.rfind("邀请")
+                last_request_pos = content.rfind("请求")
+                last_pos = max(last_invite_pos, last_request_pos)
+                group_id = re.findall(pattern, content)
+                receiver = content[:last_pos]
+                send_msg = '15\n' + self.user_name + '\n' + receiver + '\n' + group_id[-1] + '\n' + msg_id
+                self.s.sendall(send_msg.encode())
+                data = self.s.recv(self.buffer_size).decode()
+                if data == 'accept':
+                    messagebox.showinfo("成功", f"已通过群聊申请")
+                    self.message(None)
+                    return
+                else:
+                    messagebox.showerror("错误", f"操作失败，失败原因:{data}")
+                    return
         else:
             new_win = talkWin(self.main_win, talkController(self.s, self.buffer_size, self.user_name, another))
 
@@ -243,7 +269,7 @@ class MenuController:
         self.config_button_color(1 if cmd == 2 else 3)
         send_msg = '2\n' + self.user_name
         self.s.sendall(send_msg.encode())  # 获取用户所有好友信息，并打印输出
-        contacts = self.s.recv(self.buffer_size).decode()
+        contacts = self.s.recv(self.buffer_size * 100).decode()
         if contacts == '$':
             messagebox.showinfo('提示', '无联系人，请先去添加好友')
             return
@@ -288,11 +314,11 @@ class MenuController:
         else:
             messagebox.showinfo('失败', '服务器拒绝你的文件传输请求')
 
-
-
-
     def make_friend_or_group(self, evt):
         new_win = addWin(self.main_win, add_ForG_Controller(self.s, self.buffer_size, self.user_name))
+
+    def create_group(self, evt):
+        new_win = CreateGroupWin(self.main_win, CreateGroupController(self.s, self.buffer_size, self.user_name))
 
     def safe_exit(self, evt):
         if evt.widget == self.main_win:

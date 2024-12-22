@@ -17,7 +17,7 @@ class WinGUI(Toplevel):
         self.rollFrame = self.__tk_rollFrame(self)
 
     def __win(self):
-        self.title("we_talked")
+        self.title("we_talked： 加群/加好友")
         # 设置窗口大小、居中
         width = 420
         height = 388 # 194
@@ -127,6 +127,20 @@ class add_ForG_Controller:
                 messagebox.showinfo('提示', '系统未找到此用户')
                 return
             self.show_result(True, data)
+        else:
+            # 加群模式
+            group_name = self.input1.get()
+            if group_name == '':
+                messagebox.showerror('错误', '请输入内容')
+                return
+            send_msg = '7\n' + group_name
+            self.s.sendall(send_msg.encode())
+            data = self.s.recv(self.buffer_size).decode()
+            if data == '$':
+                messagebox.showinfo('提示', '系统未找到此名称的群聊')
+                return
+            self.show_result(False, data)
+
 
     def show_result(self, friend: bool, content):
         for widget in self.rollFrame.winfo_children():     # 清楚之前的内容
@@ -140,8 +154,13 @@ class add_ForG_Controller:
             label.bind("<Double-Button-1>", lambda evt, info=content: self.add_friend(evt, info))
         else:
             content = content.split('\n')
-            pass
-            # for i, row in enumerate(content):
+            for i, row in enumerate(content):
+                group_id, info = row.split('$')
+                group_name = info[:info.find('  ')]
+                label = Label(self.rollFrame, text=info)
+                label.grid(row=i, column=0)
+                label.bind("<Double-Button-1>", lambda evt, gid=group_id, gname=group_name: self.join_group(evt, gid, gname))
+
 
     def add_friend(self, evt, info):
         info = info.split('  ')
@@ -160,9 +179,18 @@ class add_ForG_Controller:
         else:
             return
 
-
-
-
+    def join_group(self, evt, gid, gname):
+        response = messagebox.askyesno("提示", f"是否加入此群聊")
+        if response:
+            send_msg = f'8\n{self.user_name}\n{gid}\n{gname}\n{self.user_name}'
+            self.s.sendall(send_msg.encode())
+            data = self.s.recv(self.buffer_size).decode()
+            if data == 'pending':
+                messagebox.showinfo('成功', '申请已发送，等待管理员同意')
+                return
+            else:
+                messagebox.showerror('失败', '加群申请发送失败')
+                return
 
 
 if __name__ == "__main__":
