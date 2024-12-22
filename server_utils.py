@@ -5,7 +5,9 @@ import bcrypt as bpt
 # login 0, register 1, get_contacts 2, get_conversations 3, search user 4, insert friends 5, message_send_to 6
 # search group by group id 7, insert groupMember 8, search_message_between 9, accept_friend_made_request 10
 # user_exit 11, request file_instant_trans 12, accept_file_trans 13, create_group 14, accept_group_join_request 15
+# search_group_members 16, get_groups 17, search_message_group 18, message_to_group 19
 system_User_name = 'we_talked'
+
 
 def give_data(cmd, conn, cursor, user_name, data, username2addr):
     if cmd == 0:
@@ -405,6 +407,59 @@ def give_data(cmd, conn, cursor, user_name, data, username2addr):
             conn.rollback()
             print(f"An error occurred: {e}")
             return 'no'
+    elif cmd == 17:
+        """获取全部群聊信息"""
+        query_user_id = "SELECT UserID FROM Users WHERE Username = ?;"
+        user_id = cursor.execute(query_user_id, (user_name,)).fetchone().UserID
+        contact_info = get_groups(cursor, user_id)
+        if contact_info:
+            return contact_info
+        else:
+            return '$'  # 无联系人
+    elif cmd == 18:
+        group_id, after, pre_time = data[2], data[3], data[4]
+        # 查询消息
+        query_messages = """
+            SELECT GroupMessageID, SenderID, Content, SentAt
+            FROM GroupMessages
+            WHERE GroupID = ?
+            AND GroupMessageID > ?
+            ORDER BY GroupMessageID;
+        """
+        cursor.execute(query_messages, (group_id, int(after)))
+        # 获取所有符合条件的消息
+        rows = cursor.fetchall()
+        if rows:
+            msg = ''
+            # 定义一个时间增量（这里是减去5分钟）
+            time_delta = timedelta(minutes=5)
+            pre_time = datetime.strptime(pre_time, '%Y-%m-%d %H:%M:%S')
+            id_dist = {}
+            for row in rows:
+                sender_id = row.SenderID
+                if row.SentAt - pre_time >= time_delta:
+                    msg += row.SentAt.strftime('%Y-%m-%d %H:%M:%S') + '\n'
+                    pre_time = row.SentAt
+                if sender_id in id_dist:
+                    sender_name = id_dist[sender_id]
+                else:
+                    query_user_name = "SELECT Username FROM Users WHERE UserID = ?;"
+                    sender_name = cursor.execute(query_user_name, (sender_id,)).fetchone().Username
+                    id_dist[sender_id] = sender_name
+                msg += sender_name + ':' + row.Content + '\n'
+            msg = msg.rstrip()
+            after = str(int(rows[-1].MessageID))
+            pre_time = datetime.strftime(pre_time, '%Y-%m-%d %H:%M:%S')
+            return after + '$' + msg + '$' + pre_time
+        else:
+            return after + '$' + 'no news' + '$' + pre_time
+    elif cmd == 19:
+        query_user_id = "SELECT UserID FROM Users WHERE Username = ?;"
+        user_id = cursor.execute(query_user_id, (user_name,)).fetchone().UserID
+        if send_message_to_group(conn, cursor, user_id, data[2], data[3]):
+            return 'yes'
+        else:
+            return 'no'
     else:
         print("错误：未知的操作类型")
         return 'no'
@@ -450,6 +505,56 @@ def get_contacts(db_cursor, user_name):
     else:
         return None
 
+
+def get_groups(db_cursor, user_name):
+    query_group = '''
+    DECLARE @member_id INT = ?;
+
+    WITH UserGroups AS (
+        SELECT 
+            g.GroupID,
+            g.GroupName
+        FROM Groups g
+        JOIN GroupMembers gm ON g.GroupID = gm.GroupID
+        WHERE gm.MemberID = @member_id AND gm.Status_ = 'Accepted'
+    ),
+
+    LatestMessages AS (
+        SELECT 
+            gm.GroupID,
+            gm.SenderID,
+            gm.Content AS LastMessageText,
+            gm.SentAt AS LastMessageTime
+        FROM GroupMessages gm
+        INNER JOIN (
+            SELECT GroupID, MAX(SentAt) AS MaxSentAt
+            FROM GroupMessages
+            GROUP BY GroupID
+        ) AS max_gm ON gm.GroupID = max_gm.GroupID AND gm.SentAt = max_gm.MaxSentAt
+    )
+
+    -- 最终选择结果并排序
+    SELECT 
+        ug.GroupID,
+        ug.GroupName,
+        COALESCE(lm.LastMessageText, '') AS LastMessageText,
+        COALESCE(lm.LastMessageTime, '1900-01-01') AS LastMessageTime
+    FROM UserGroups ug
+    LEFT JOIN LatestMessages lm ON ug.GroupID = lm.GroupID
+    ORDER BY 
+        COALESCE(lm.LastMessageTime, '1900-01-01') DESC;
+    '''
+    db_cursor.execute(query_group, (user_name, ))
+    rows = db_cursor.fetchall()
+    if rows:
+        msg = ''
+        for row in rows:
+            msg += row.GroupName + '$' + str(row.GroupID) + '$' + row.LastMessageText + '\n'
+        return msg.rstrip('\n')
+    else:
+        return None
+
+
 def send_message_to(conn, cursor, sender_username, receiver_username, message_content):
     assert type(sender_username) == type(receiver_username), 'wrong type'
     if not isinstance(sender_username, int) and not isinstance(receiver_username, int):
@@ -469,6 +574,24 @@ def send_message_to(conn, cursor, sender_username, receiver_username, message_co
                     """
     try:
         cursor.execute(insert_message_query, (sender, receiver, message_content))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"An error occurred: {e}")
+        return False
+    return True
+
+
+def send_message_to_group(conn, cursor, sender_id, group_id, message_content):
+    """向群聊中发送消息"""
+    sender, group = sender_id, group_id
+    # 插入消息到Messages_表
+    insert_message_query = """
+                    INSERT INTO GroupMessages (SenderID, groupID, Content)
+                    VALUES (?, ?, ?);
+                    """
+    try:
+        cursor.execute(insert_message_query, (sender, group, message_content))
         conn.commit()
     except Exception as e:
         conn.rollback()

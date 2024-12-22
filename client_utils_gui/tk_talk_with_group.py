@@ -15,6 +15,7 @@ class WinGUI(Toplevel):
         self.tk_send_msg_button = self.__tk_send_msg_button(self)
         self.tk_button_image_button = self.__tk_button_image_button(self)
         self.tk_button_file_button = self.__tk_button_file_button(self)
+        self.tk_button_add_member = self.__tk_button_add_member(self)
 
     def __win(self):
         self.title("we_talked")
@@ -99,6 +100,11 @@ class WinGUI(Toplevel):
         btn.place(x=64, y=245, width=50, height=30)
         return btn
 
+    def __tk_button_add_member(self, parent):
+        btn = Button(parent, text="邀请新成员", takefocus=False, )
+        btn.place(x=467, y=245, width=90, height=30)
+        return btn
+
 
 class Win(WinGUI):
     def __init__(self, root, controller):
@@ -107,23 +113,25 @@ class Win(WinGUI):
         self.__event_bind()
         self.ctl.init(self.tk_text_input_msg, self.tk_text_history_msg, self.tk_text_talk_with)
         self.stop_event = threading.Event()
-        self.convers_thread = threading.Thread(target=self.ctl.insert_his_msg, args=(self.stop_event,))
+        self.convers_thread = threading.Thread(target=self.ctl.insert_group_msg, args=(self.stop_event,))
         self.convers_thread.start()
         self.bind('<Destroy>', lambda evt: self.stop_event.set())
     def __event_bind(self):
-        self.tk_text_input_msg.bind('<Return>', self.ctl.message_to)
+        self.tk_text_input_msg.bind('<Return>', self.ctl.message_to_group)
         # self.tk_text_input_msg.bind("<Shift-Return>", self.ctl.input_an_enter)
-        self.tk_send_msg_button.bind('<Button-1>', self.ctl.message_to)
+        self.tk_send_msg_button.bind('<Button-1>', self.ctl.message_to_group)
         self.tk_button_image_button.bind('<Button-1>', self.ctl.image_send_to)
         self.tk_button_file_button.bind('<Button-1>', self.ctl.file_send_to)
+        self.tk_button_add_member.bind('<Button-1>', self.ctl.invite_new_member)
+
 
 class Controller:
-
-    def __init__(self, s, buffer_size, user_name, another_name):
+    def __init__(self, s, buffer_size, user_name, group_name, group_id):
         self.s = s
         self.buffer = buffer_size
+        self.group_name = group_name
+        self.group_id = group_id
         self.user_name = user_name
-        self.another = another_name
         self.after = '0'
         self.pre_time = '2020-01-01 00:00:00'
         self.socket_lock = threading.Lock()
@@ -135,12 +143,12 @@ class Controller:
         self.top_info.insert(END, '\t-----we_talked-----\n')
         self.top_info.tag_configure("center", justify='center')
         # 插入文本并应用居中对齐的标签
-        self.top_info.insert(END, self.another, "center")
+        self.top_info.insert(END, self.group_name, "center")
         self.top_info.configure(state=DISABLED)
 
-    def insert_his_msg(self, stop_event):
+    def insert_group_msg(self, stop_event):
         while not stop_event.is_set():
-            msg = '9\n' + self.user_name + '\n' + self.another + '\n' + self.after + '\n' + self.pre_time
+            msg = '18\n' + self.user_name + '\n' + self.group_id + '\n' + self.after + '\n' + self.pre_time
             self.s.sendall(msg.encode())
             with self.socket_lock:
                 data = self.s.recv(4 * self.buffer if self.after == '0' else self.buffer)
@@ -153,14 +161,14 @@ class Controller:
                 self.his_msg.configure(state=DISABLED)
             time.sleep(2)
 
-    def message_to(self, evt):
+    def message_to_group(self, evt):
         """Enter快捷键或者点击发送按键发送消息,同时清空输入框"""
         input = self.input_msg.get("1.0", END + "-1c")
         self.input_msg.delete("1.0", END)
         if not input:
             messagebox.showwarning("警告", "发送内容为空")
             return 'break'
-        send_msg = '6\n' + self.user_name + '\n' + self.another + '\n' + input.replace("\n", "")
+        send_msg = '19\n' + self.user_name + '\n' + self.group_id + '\n' + input.replace("\n", "")
         self.s.sendall(send_msg.encode())
         with self.socket_lock:
             data = self.s.recv(self.buffer).decode()
@@ -173,13 +181,5 @@ class Controller:
     def file_send_to(self, evt):
         print("<Button-1>事件未处理:", evt)
 
-    # def input_an_enter(self, evt):
-    #     self.input_msg.insert(END, "\n")
-    #     return "break"
-
-if __name__ == "__main__":
-    s, buffer = 'a', 1
-    user_name, another = 'mao', 'han'
-    ctl = Controller(s, buffer, user_name, another)
-    win = Win(ctl)
-    win.mainloop()
+    def invite_new_member(self, evt):
+        print("")

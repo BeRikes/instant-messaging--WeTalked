@@ -9,8 +9,11 @@ from tkinter.ttk import *
 from client_utils_gui.file_utils import transmit_instant_files, receive_instant_files, get_file_list
 from client_utils_gui.tk_talk_with_one import Controller as talkController
 from client_utils_gui.tk_talk_with_one import Win as talkWin
+from client_utils_gui.tk_talk_with_group import Controller as groupController
+from client_utils_gui.tk_talk_with_group import Win as GroupWin
 from client_utils_gui.tk_add_friend_or_group import add_ForG_Controller, Win as addWin
 from client_utils_gui.tk_create_group import CreateGroupController, GroupCreater as CreateGroupWin
+
 
 class WinGUI(Toplevel):
     def __init__(self, root):
@@ -92,6 +95,7 @@ class WinGUI(Toplevel):
         dropdownmenu.place(x=187, y=61, width=75, height=25)
         return v
 
+
 class Win(WinGUI):
     def __init__(self, root, controller):
         self.root = root
@@ -116,10 +120,10 @@ class Win(WinGUI):
         # style.map('TButton', background=[('active', '!disabled', 'SystemButtonFace')], foreground=[('active', '!disabled', 'black')])
         style.configure('Clicked.TButton', foreground='gray', background='black')
 
-
     def safe_destroy(self, evt):
         if evt.widget == self:
             self.root.quit()
+
 
 class MenuController:
     def __init__(self, s, buffer_size, user_name):
@@ -190,6 +194,25 @@ class MenuController:
                 else:
                     label.bind("<Double-Button-1>", lambda evt, another=name, act=isActive: self.req_file_instant_transmit(evt, another, act))
                     label2.bind("<Double-Button-1>", lambda evt, another=name, act=isActive: self.req_file_instant_transmit(evt, another, act))
+        elif cmd == 17:
+            for i, row in enumerate(content):
+                print(row)
+                group_name, group_id, message = row.split('$')
+                f = tk.Frame(self.rollFrame)
+                f.grid(row=i, column=0)
+                label = tk.Label(f, text=f"{group_name}[{group_id}]")
+                label.pack(side='left')
+                if len(message) >= 25:
+                    message = message[:23] + "……"
+                label2 = tk.Label(f, text=message[:23])
+                label2.pack(side='left')
+                label.bind("<Double-Button-1>", lambda evt, info=row: self.group_talk(evt, info))
+                label2.bind("<Double-Button-1>", lambda evt, info=row: self.group_talk(evt, info))
+                f.bind('<Enter>', lambda evt, frame=f, all_label=(label, label2), bd='#DCDCDC': self.config_text_color(
+                    evt, frame, all_label, bd))
+                f.bind('<Leave>',
+                       lambda evt, frame=f, all_label=(label, label2), bd='SystemButtonFace': self.config_text_color(
+                           evt, frame, all_label, bd))
         else:
             for i, row in enumerate(content):
                 label = tk.Label(self.rollFrame, text=row)
@@ -281,8 +304,19 @@ class MenuController:
 
     def group(self, evt):
         self.config_button_color(2)
-        messagebox.showwarning('警告', '此功能尚未实现')
+        send_msg = '17\n' + self.user_name
+        self.s.sendall(send_msg.encode())
+        groups = self.s.recv(100 * self.buffer_size).decode()
+        if groups == '$':
+            messagebox.showinfo('提示', '当前未加入群聊')
+            return
+        else:
+            self.config_rollFrame(17, groups)
         return
+
+    def group_talk(self, evt, info):
+        group_name, group_id, message = info.split('$')
+        new_win = GroupWin(self.main_win, groupController(self.s, self.buffer_size, self.user_name, group_name, group_id))
 
     def req_file_instant_transmit(self, evt, another, act):
         if act == 'False':
