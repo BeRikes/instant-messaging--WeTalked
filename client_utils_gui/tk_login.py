@@ -26,7 +26,7 @@ class LoginGUI(Tk):
         screenheight = self.winfo_screenheight()
         geometry = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
         self.geometry(geometry)
-
+        self.iconbitmap('asset/we_talked.ico')
         self.resizable(width=False, height=False)
 
     def __tk_input_m4mxk6z8(self, parent):
