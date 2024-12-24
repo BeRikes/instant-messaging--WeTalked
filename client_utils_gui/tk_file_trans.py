@@ -1,6 +1,8 @@
 from tkinter import *
 from tkinter.ttk import *
 
+from plyer import notification
+
 
 class file_trans_win(Toplevel):
     def __init__(self, root):
@@ -56,5 +58,10 @@ class fileWin(file_trans_win):
         Label(self.rollFrame, text=name).pack(side='top')
         if self.progressbar['value'] == self.progressbar['maximum']:
             self.finished_label.place(x=182, y=252, width=80, height=30)
-
+            notification.notify(
+                title="成功",
+                message='文件传输已完成',
+                timeout=2,
+                app_icon='asset/we_talked.ico'
+            )
 

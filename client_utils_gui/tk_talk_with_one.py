@@ -3,6 +3,8 @@ import time
 from tkinter import *
 from tkinter import messagebox
 from tkinter.ttk import *
+from ctypes import windll
+from plyer import notification
 
 
 class WinGUI(Toplevel):
@@ -13,8 +15,8 @@ class WinGUI(Toplevel):
         self.tk_text_talk_with = self.__tk_text_talk_with(self)
         self.tk_text_input_msg = self.__tk_text_input_msg(self)
         self.tk_send_msg_button = self.__tk_send_msg_button(self)
-        self.tk_button_image_button = self.__tk_button_image_button(self)
-        self.tk_button_file_button = self.__tk_button_file_button(self)
+        # self.tk_button_image_button = self.__tk_button_image_button(self)
+        # self.tk_button_file_button = self.__tk_button_file_button(self)
 
     def __win(self):
         self.title("we_talked")
@@ -105,7 +107,7 @@ class Win(WinGUI):
         self.ctl = controller
         super().__init__(root)
         self.__event_bind()
-        self.ctl.init(self.tk_text_input_msg, self.tk_text_history_msg, self.tk_text_talk_with)
+        self.ctl.init(self, self.tk_text_input_msg, self.tk_text_history_msg, self.tk_text_talk_with)
         self.stop_event = threading.Event()
         self.convers_thread = threading.Thread(target=self.ctl.insert_his_msg, args=(self.stop_event,))
         self.convers_thread.start()
@@ -114,8 +116,8 @@ class Win(WinGUI):
         self.tk_text_input_msg.bind('<Return>', self.ctl.message_to)
         # self.tk_text_input_msg.bind("<Shift-Return>", self.ctl.input_an_enter)
         self.tk_send_msg_button.bind('<Button-1>', self.ctl.message_to)
-        self.tk_button_image_button.bind('<Button-1>', self.ctl.image_send_to)
-        self.tk_button_file_button.bind('<Button-1>', self.ctl.file_send_to)
+        # self.tk_button_image_button.bind('<Button-1>', self.ctl.image_send_to)
+        # self.tk_button_file_button.bind('<Button-1>', self.ctl.file_send_to)
 
 class Controller:
 
@@ -127,8 +129,10 @@ class Controller:
         self.after = '0'
         self.pre_time = '2020-01-01 00:00:00'
         self.socket_lock = threading.Lock()
+        self.u32 = windll.user32
 
-    def init(self, input_msg, his_msg, top_info):
+    def init(self, main_win, input_msg, his_msg, top_info):
+        self.main_win = main_win
         self.input_msg = input_msg
         self.his_msg = his_msg
         self.top_info = top_info
@@ -137,6 +141,15 @@ class Controller:
         # 插入文本并应用居中对齐的标签
         self.top_info.insert(END, self.another, "center")
         self.top_info.configure(state=DISABLED)
+
+    def message_notify(self):
+        self.u32.FlashWindow(self.u32.GetParent(self.main_win.winfo_id()), True)
+        notification.notify(
+            title=f"{self.user_name}",
+            message=f'收到{self.another}的新消息',
+            timeout=2,
+            app_icon='asset/we_talked.ico'
+        )
 
     def insert_his_msg(self, stop_event):
         while not stop_event.is_set():
@@ -151,6 +164,8 @@ class Controller:
                 self.his_msg.insert(END, content + '\n')
                 self.his_msg.see(END)  # 自动滚动到底部
                 self.his_msg.configure(state=DISABLED)
+                if content[0] == '对':
+                    self.message_notify()
             time.sleep(2)
 
     def message_to(self, evt):
