@@ -126,6 +126,8 @@ class Controller:
                 if self.login_cmd == 0:
                     messagebox.showinfo("成功", "登录成功, 密码正确")
                     self.login.withdraw()
+                    self.login.tk_input1.unbind('<Return>')
+                    self.login.tk_input2.unbind('<Return>')
                     self.menu = MenuWin(self.login, MenuController(self.s, self.buffer_size, user_name))
                     return
                 elif self.login_cmd == 1:
