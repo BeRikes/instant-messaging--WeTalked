@@ -1,10 +1,7 @@
 # WeTalked
 
 #### 介绍
-软件工程实践课期末大作业——即时通讯小程序WeTalked
-
-#### 参与贡献
-毛子函(main contributor)、潘颂朗、孙涛、郑恺、陆宇扬
+即时通讯小程序WeTalked
 
 ## 使用说明
 ### 环境配置
@@ -15,6 +12,7 @@ python环境，python版本不要太老，项目搭建时的python版本是3.8.0
 请终端运行以下命令\
 `pip install pyodbc`\
 `pip install bcrypt`\
+`pip install plyer`\
 
 ### client客户端使用
 请终端运行\
@@ -30,4 +28,7 @@ python环境，python版本不要太老，项目搭建时的python版本是3.8.0
 
 如果进行大流量通讯，请调大buffer_size参数
 ### server服务器使用
-请终端运行`python server.py`，运行之前将ip地址改为本机ip或者远程服务器ip地址
+请终端运行`python server.py`，运行之前将ip地址改为本机ip或者远程服务器ip地址\
+<font color=red>
+请注意此IP地址请尽可能保证为公网IP地址，否则这服务器只能为处在同一局域网内的主机提供服务
+</font>

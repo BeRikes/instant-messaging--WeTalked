@@ -4,11 +4,6 @@ from client_utils.conversation import *
 from client_utils.friends_groups import *
 
 
-# 服务器要执行的操作+对应的指令id:
-# login 0, register 1, get_contacts 2, get_conversations 3, search user 4, insert friends 5, message_send_to 6
-# search group by group id 7, insert groupMember 8, search_message_between 9, accept_friend_made_request 10
-
-
 def start_client(host='127.0.0.1', port=65432, buffer_size=1024):
     """客户端socket程序(控制台)"""
     functions = ('消息', '联系人', '群聊', '加好友/群', '退出')

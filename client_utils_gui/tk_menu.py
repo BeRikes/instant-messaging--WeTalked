@@ -117,12 +117,7 @@ class Win(WinGUI):
     def __style_config(self):
         style = Style()
         style.configure('TButton', foreground='black', background='SystemButtonFace')
-        # style.map('TButton', background=[('active', '!disabled', 'SystemButtonFace')], foreground=[('active', '!disabled', 'black')])
         style.configure('Clicked.TButton', foreground='gray', background='black')
-
-    def safe_destroy(self, evt):
-        if evt.widget == self:
-            self.root.quit()
 
 
 class MenuController:

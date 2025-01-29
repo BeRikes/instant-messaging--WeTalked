@@ -311,6 +311,7 @@ def give_data(cmd, conn, cursor, user_name, data, username2addr):
             conn.rollback()
             print(f"An error occurred: {e}")
     elif cmd == 11:
+        """用户下线"""
         try:
             update_cnt = cursor.execute('UPDATE Users SET IsActive = 0 WHERE Username = ?', (user_name,)).rowcount
             conn.commit()
@@ -321,6 +322,7 @@ def give_data(cmd, conn, cursor, user_name, data, username2addr):
         except Exception as e:
             conn.rollback()
             print(f"An error occurred: {e}")
+            return 'forced'
     elif cmd == 12:
         """发送文件即时传输请求(系统消息)"""
         if send_message_to(conn, cursor, system_User_name, data[2], f'{user_name}请求文件传输{data[3]}'):

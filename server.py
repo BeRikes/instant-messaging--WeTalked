@@ -17,7 +17,7 @@ def handle_client(conn, addr, buffer, username2addr):
     with pbc.connect(conn_str) as db_conn:
         print("数据库连接成功")
         with db_conn.cursor() as db_cursor:
-            with conn:
+            try:
                 while True:
                     data = conn.recv(10 * buffer)
                     if not data:
@@ -34,6 +34,11 @@ def handle_client(conn, addr, buffer, username2addr):
                         user_name = u_name
                     send_msg = give_data(cmd, db_conn, db_cursor, user_name, data, username2addr)
                     conn.sendall(send_msg.encode())
+            except Exception as e:
+                print(f"An error occurred for {user_name}'s process")
+                give_data(11, db_conn, db_cursor, user_name, None, None)
+                conn.close()
+                print(f"{user_name} already forced to exit")
 
 
 def start_server(host, port, buffer, username2addr):
@@ -49,7 +54,7 @@ def start_server(host, port, buffer, username2addr):
 
 
 if __name__ == "__main__":
-    server_ip_addr = '10.150.220.87'
+    server_ip_addr = '192.168.0.1'
     server_port = 65432
     buffer_size = 409600
     with multiprocessing.Manager() as manager:
